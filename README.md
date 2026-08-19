@@ -11,19 +11,15 @@ This README explains what changed, why, and what's still open.
 | Approach | Key fix | Real result |
 |---|---|---|
 | **Supervised classification** | Path portability only; core logic untouched | Random Forest (900 trees): **72.7% accuracy**, 0.729 F1 — unchanged from original run, outputs preserved |
-| **Unsupervised clustering** (ResNet50 + K-Means) | Fixed a variable-name collision that silently destroyed ground-truth labels; added the quantitative evaluation that was missing | **ARI = 1.0, purity = 1.0 (603/603)** — the "perfect separation" observation is now formally confirmed, not just eyeballed |
-| **Anomaly detection** (autoencoder + Mahalanobis) | Fixed train/test leakage (model was being evaluated on data it trained on) | **50% accuracy** on the corrected, leak-free evaluation — a real, honest, much weaker result than a leaky evaluation would have shown |
+| **Unsupervised clustering** (ResNet50 + K-Means) | Fixed a variable-name collision that silently destroyed ground-truth labels; added the quantitative evaluation that was missing | **ARI = 1.0, purity = 1.0** on ~600 grouped scans |
+| **Anomaly detection** (autoencoder + Mahalanobis) | Fixed train/test leakage (model was being evaluated on data it trained on) | **50% accuracy** on the corrected, leak-free evaluation — a real, honest finding |
 
 ---
 
 ## 1. Directory structure
 
 ```
-Brain_Cancer/
-├── brain_glioma/                  # 2,004 images (unchanged)
-├── brain_menin/                   # 2,004 images (unchanged)
-├── brain_tumor/                   # 2,048 images (unchanged)
-│
+brain-cancer-ml/
 ├── supervised_classification.ipynb   # PCA + LogReg/KNN/RF (finalized)
 ├── clustering_analysis.ipynb         # ResNet50 + K-Means (finalized, executed)
 ├── anomaly_detection.ipynb           # Autoencoder + Mahalanobis (finalized, executed)
@@ -45,10 +41,11 @@ Brain_Cancer/
 └── README.md                      # this file
 ```
 
+**Note:** The raw image folders (`brain_glioma/`, `brain_menin/`, `brain_tumor/`, containing ~6,000 total images) are **not included** in this repository due to size constraints. You will need to obtain the original dataset and place these folders in the repository root for the notebooks and scripts to run.
+
 All scripts/notebooks resolve paths relative to their own location
 (`Path.cwd()` / `Path(__file__).parent`), so this works as long as the
-notebooks and scripts stay in the same folder as the three class
-subfolders — matches the layout you described.
+three class image folders are placed in the same directory as the notebooks and scripts.
 
 ---
 
@@ -63,25 +60,23 @@ matrices, accuracy-vs-k and accuracy-vs-n_estimators curves, classification
 reports) are **preserved from your original run**, not regenerated.
 
 **Changed:** only the image-loading paths, from bare relative filenames
-(`Image.open(f"brain_glioma_{i}.jpg")`, which only works if the notebook
-sits in a folder of flat, unsorted images) to portable paths pointing
-into the `brain_glioma/` etc. subfolders.
+to portable paths that expect the `brain_glioma/`, `brain_menin/`, and `brain_tumor/` 
+folders to be present in the repository root.
 
 **Why I didn't re-run it:** the raw-pixel approach loads all ~6,000
 images as flattened float32 vectors (262,144 features each) into one
 in-memory matrix before running PCA — roughly 6GB+ of RAM. That exceeded
 what was available in my execution environment. Since the only code
-change was the path prefix (not the modeling logic, data selection, or
+change was the path structure (not the modeling logic, data selection, or
 sample count), the existing outputs should still be accurate — but this
 should be verified by re-running the notebook top-to-bottom on a machine
 with sufficient RAM.
 
 **Found but not fixed:** the loading loops use `range(1, 2005)`, i.e.
-exactly 2,004 images per class. The actual `brain_tumor/` folder has
-2,048 images — 44 more than the notebook loads. I flagged this in the
-notebook rather than silently fixing it, because correcting it would
-change the PCA fit and invalidate the existing (preserved) outputs
-without my being able to regenerate them here.
+exactly 2,004 images per class. The actual raw dataset has 2,048 tumor images
+— 44 more than the notebook loads. I flagged this in the notebook rather
+than silently fixing it, because correcting it would change the PCA fit
+and invalidate the existing (preserved) outputs.
 
 ### Unsupervised clustering (`clustering_analysis.ipynb`)
 
@@ -124,18 +119,17 @@ components, Mahalanobis distance, 90th-percentile threshold — all as
 originally written.
 
 **Fixed — train/test leakage:** the original trained on glioma images
-and then evaluated on an `ImageFolder` built from the *same root
-directory*, meaning the "test" set included the exact images used for
-training. This version splits glioma images 80/20 **before** training
-(1,604 train / 400 held out); the autoencoder never sees the held-out
-400. Evaluation runs on those 400 plus all 4,052 menin/tumor images.
+and then evaluated on data from the same source folder, meaning the "test" set
+included the exact images used for training. This version splits the glioma
+images 80/20 **before** training (1,604 train / 400 held out); the
+autoencoder never sees the held-out 400. Evaluation runs on those 400 plus
+all meningioma and tumor images.
 
 **Fixed — fragile path/class discovery:** the original used
 `torchvision.ImageFolder`, which auto-discovers *every* subdirectory as
 a class. This breaks the moment any non-class folder (like `outputs/`)
-sits next to the data — which it now does, in this finalized layout.
-Replaced with an explicit loader that only reads the three named class
-folders.
+sits next to the data. Replaced with an explicit loader that only reads
+the three named class folders.
 
 **Result, honestly reported:** once the leak is closed, performance
 drops to **50% overall accuracy** (0.14 precision / 0.89 recall on
@@ -151,11 +145,15 @@ clustering results on the same underlying data.
 
 ## 3. Reproducing this yourself
 
+First, **obtain the original brain tumor MRI dataset and place the three class folders
+(`brain_glioma/`, `brain_menin/`, `brain_tumor/`) in the repository root.**
+
+Then:
+
 ```bash
 pip install -r requirements.txt
 
-# 1. Extract ResNet50 features (slow on CPU-only machines — this
-#    review environment took ~70 min single-threaded; a GPU or
+# 1. Extract ResNet50 features (slow on CPU-only machines — a GPU or
 #    multi-core machine will be much faster)
 python extract_features.py
 
