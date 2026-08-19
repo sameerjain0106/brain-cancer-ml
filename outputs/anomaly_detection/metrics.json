@@ -1,0 +1,55 @@
+{
+  "target_class": "brain_glioma",
+  "train_size": 1604,
+  "eval_size": 4452,
+  "eval_held_out_glioma": 400,
+  "epochs": 10,
+  "final_train_loss": 0.001361311826507981,
+  "latent_pca_components": 100,
+  "latent_pca_explained_variance": 0.9463747143745422,
+  "threshold_percentile": 90,
+  "threshold_value": 12.104248210739428,
+  "confusion_matrix": {
+    "labels": [
+      "Glioma-like (0)",
+      "Anomaly (1)"
+    ],
+    "matrix": [
+      [
+        357,
+        43
+      ],
+      [
+        2204,
+        1848
+      ]
+    ]
+  },
+  "classification_report": {
+    "Glioma-like": {
+      "precision": 0.13939867239359624,
+      "recall": 0.8925,
+      "f1-score": 0.24113475177304963,
+      "support": 400.0
+    },
+    "Anomaly": {
+      "precision": 0.9772607086197779,
+      "recall": 0.456071076011846,
+      "f1-score": 0.6219081272084805,
+      "support": 4052.0
+    },
+    "accuracy": 0.49528301886792453,
+    "macro avg": {
+      "precision": 0.558329690506687,
+      "recall": 0.674285538005923,
+      "f1-score": 0.4315214394907651,
+      "support": 4452.0
+    },
+    "weighted avg": {
+      "precision": 0.9019811006928973,
+      "recall": 0.49528301886792453,
+      "f1-score": 0.5876966828746593,
+      "support": 4452.0
+    }
+  }
+}
