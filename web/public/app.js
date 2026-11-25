@@ -15,6 +15,11 @@ let selectedSample = null;
 let selectedUrl = null;
 let latestRun = 0;
 let comparison = null;
+let pinnedGroup = null;
+let hoveredGroup = null;
+let chartPositions = [];
+let hoverFrame = 0;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 function say(message, error = false) {
   status.textContent = message;
@@ -54,7 +59,7 @@ function drawMap() {
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   context.clearRect(0, 0, width, height);
   const padding = 22;
-  context.strokeStyle = "#d6e5da";
+  context.strokeStyle = "#d1cc9d";
   context.beginPath();
   for (let step = 0; step <= 5; step += 1) {
     const x = padding + (width - 2 * padding) * step / 5;
@@ -78,15 +83,35 @@ function drawMap() {
     padding + limit((x - minX) / (maxX - minX)) * (width - 2 * padding),
     height - padding - limit((y - minY) / (maxY - minY)) * (height - 2 * padding),
   ];
-  context.globalAlpha = 0.56;
-  for (const group of groups) {
-    const [x, y] = position(group.x, group.y);
+  chartPositions = groups.map((group) => position(group.x, group.y));
+  context.globalAlpha = 0.62;
+  for (let index = 0; index < groups.length; index += 1) {
+    const group = groups[index];
+    const [x, y] = chartPositions[index];
     context.fillStyle = labels[group.label].color;
     context.beginPath();
     context.arc(x, y, 2.5, 0, Math.PI * 2);
     context.fill();
   }
   context.globalAlpha = 1;
+  const inspectedIndex = hoveredGroup ?? pinnedGroup;
+  if (inspectedIndex !== null && chartPositions[inspectedIndex]) {
+    const [x, y] = chartPositions[inspectedIndex];
+    context.strokeStyle = "#17152c";
+    context.beginPath();
+    context.moveTo(x, padding);
+    context.lineTo(x, height - padding);
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.globalAlpha = 0.3;
+    context.stroke();
+    context.globalAlpha = 1;
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(x, y, 7, 0, Math.PI * 2);
+    context.stroke();
+    context.lineWidth = 1;
+  }
   if (!comparison) return;
   const [queryX, queryY] = comparison.coordinates;
   const [qx, qy] = position(queryX, queryY);
@@ -94,7 +119,7 @@ function drawMap() {
     const group = groups[match.index];
     const [gx, gy] = position(group.x, group.y);
     context.setLineDash([3, 4]);
-    context.strokeStyle = "#31574b93";
+    context.strokeStyle = "#37344f8c";
     context.beginPath();
     context.moveTo(qx, qy);
     context.lineTo(gx, gy);
@@ -107,7 +132,7 @@ function drawMap() {
   }
   context.strokeStyle = "#ffffff";
   context.lineWidth = 2;
-  context.fillStyle = "#102a26";
+  context.fillStyle = "#17152c";
   context.beginPath();
   context.arc(qx, qy, 6, 0, Math.PI * 2);
   context.fill();
@@ -116,7 +141,7 @@ function drawMap() {
   const outside = queryX < minX || queryX > maxX || queryY < minY || queryY > maxY;
   element("map-caption").textContent = outside
     ? "The query lies beyond the plotted reference span. Its marker sits on the plot boundary."
-    : "The map compresses 2,048 features into two dimensions. Neighbor ranking uses the full feature vectors.";
+    : "Two dimensions for the plot. All 2,048 features for the comparison.";
 }
 
 function showImage(url, alt, origin, caption, local = false) {
@@ -137,11 +162,53 @@ function markSelection(id) {
   }
 }
 
+function inspectGroup() {
+  const index = hoveredGroup ?? pinnedGroup;
+  const group = index === null ? null : reference?.groups[index];
+  const note = element("map-inspection");
+  note.textContent = group
+    ? labels[group.label].name + " · group " + (String(group.id).match(/\d+$/)?.[0] ?? group.id) + " · " + group.sourceCount + " crops"
+    : "Select a point or choose a match below.";
+  note.dataset.inspecting = String(Boolean(group));
+  drawMap();
+}
+
+function frameAt(event) {
+  const rect = canvas.getBoundingClientRect();
+  let best = null;
+  let bestDistance = 11 ** 2;
+  for (let index = 0; index < chartPositions.length; index += 1) {
+    const [x, y] = chartPositions[index];
+    const distance = (x - (event.clientX - rect.left)) ** 2 + (y - (event.clientY - rect.top)) ** 2;
+    if (distance < bestDistance) {
+      best = index;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+function pinGroup(index) {
+  pinnedGroup = pinnedGroup === index ? null : index;
+  for (const match of element("matches").querySelectorAll("button")) {
+    match.setAttribute("aria-pressed", String(Number(match.dataset.groupIndex) === pinnedGroup));
+  }
+  inspectGroup();
+}
+
+function resetInspection() {
+  if (hoverFrame) cancelAnimationFrame(hoverFrame);
+  hoverFrame = 0;
+  pinnedGroup = null;
+  hoveredGroup = null;
+}
+
 function renderComparison(values, excludedIndex = -1) {
   const query = unitVector(values, reference.dimension);
   const matches = closestGroups(query, vectors, reference.groups.length, excludedIndex);
   const best = reference.groups[matches[0].index];
   comparison = { matches, coordinates: project(query, reference.projection) };
+  resetInspection();
   const nearest = labels[best.label].name;
   const cutoff = reference.validation.nearestDistance.p95;
   const distant = matches[0].distance > cutoff;
@@ -171,24 +238,31 @@ function renderComparison(values, excludedIndex = -1) {
     const value = document.createElement("span");
     value.className = "match-value";
     value.textContent = distance.toFixed(3);
-    row.append(swatch(group.label), label, groupInfo, value);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-pressed", "false");
+    button.append(swatch(group.label), label, groupInfo, value);
+    button.dataset.groupIndex = String(index);
+    button.addEventListener("click", () => pinGroup(index));
+    row.append(button);
     return row;
   }));
-  drawMap();
+  inspectGroup();
 }
 
 function resetComparison(title, note) {
   comparison = null;
+  resetInspection();
   element("reference-proximity").hidden = true;
   element("comparison-title").textContent = title;
   element("comparison-note").textContent = note;
   element("matches").replaceChildren();
   element("map-caption").textContent = "The map compresses 2,048 features into two dimensions. Neighbor ranking uses the full feature vectors.";
   element("map-description").textContent = "A scatter plot of reference scan groups in the first two principal components, colored by dataset label.";
-  drawMap();
+  inspectGroup();
 }
 
-function useSample(sample) {
+function useSample(sample, animate = false) {
   latestRun += 1;
   if (pendingUpload) {
     worker?.terminate();
@@ -198,7 +272,12 @@ function useSample(sample) {
   pick.disabled = false;
   markSelection(sample.id);
   showImage(localAsset(sample.imagePath).href, "Published MRI project crop labeled " + labels[sample.label].name,
-    "Published example", "This example uses the feature vector saved by the original project.");
+    "Published example", "This crop uses its saved ResNet50 features.");
+  if (animate && !reducedMotion.matches && typeof image.animate === "function") {
+    for (const animation of image.getAnimations()) animation.cancel();
+    image.animate([{ opacity: 0.52, transform: "translateY(4px)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 170, easing: "cubic-bezier(.23,1,.32,1)" });
+  }
   renderComparison(sample.embedding, sample.groupIndex);
   say("Showing the published " + labels[sample.label].name.toLowerCase() + " example.");
 }
@@ -281,7 +360,13 @@ function renderFollowup(report) {
     const score = report.results[key];
     row.insertCell().textContent = label;
     row.insertCell().textContent = score.auroc.toFixed(3);
-    row.insertCell().textContent = (100 * score.balancedAccuracy).toFixed(2) + "%";
+    const accuracy = row.insertCell();
+    accuracy.textContent = (100 * score.balancedAccuracy).toFixed(2) + "%";
+    const bar = document.createElement("div");
+    bar.className = "score-fill";
+    bar.setAttribute("aria-hidden", "true");
+    bar.style.setProperty("--score", (100 * score.balancedAccuracy) + "%");
+    accuracy.append(bar);
   }
   const split = report.split;
   element("followup-description").textContent =
@@ -308,8 +393,13 @@ async function start() {
       button.className = "sample-button";
       button.dataset.sample = sample.id;
       button.setAttribute("aria-pressed", "false");
-      button.append(swatch(sample.label), labels[sample.label].name);
-      button.addEventListener("click", () => useSample(sample));
+      const thumb = document.createElement("img");
+      thumb.alt = "";
+      thumb.src = localAsset(sample.imagePath).href;
+      const caption = document.createElement("span");
+      caption.append(swatch(sample.label), labels[sample.label].name);
+      button.append(thumb, caption);
+      button.addEventListener("click", (event) => useSample(sample, event.detail > 0));
       samples.append(button);
     }
     samples.setAttribute("aria-busy", "false");
@@ -349,4 +439,27 @@ if (typeof ResizeObserver === "function") {
 } else {
   window.addEventListener("resize", drawMap);
 }
+canvas.addEventListener("pointermove", (event) => {
+  if (event.pointerType !== "mouse" || hoverFrame) return;
+  hoverFrame = requestAnimationFrame(() => {
+    hoverFrame = 0;
+    const next = frameAt(event);
+    if (hoveredGroup !== next) {
+      hoveredGroup = next;
+      inspectGroup();
+    }
+  });
+});
+canvas.addEventListener("click", (event) => {
+  const index = frameAt(event);
+  if (index !== null) pinGroup(index);
+});
+canvas.addEventListener("pointerleave", () => {
+  if (hoverFrame) cancelAnimationFrame(hoverFrame);
+  hoverFrame = 0;
+  if (hoveredGroup !== null) {
+    hoveredGroup = null;
+    inspectGroup();
+  }
+});
 start();
