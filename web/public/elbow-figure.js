@@ -153,4 +153,4 @@ async function loadElbow() {
   if (scores.every(score => Number.isFinite(score) && score > 0)) renderElbow(scores);
 }
 
-if (figure) loadElbow().catch(() => {});
+if (figure && !document.documentElement.hasAttribute("data-portfolio-embed")) loadElbow().catch(() => {});
