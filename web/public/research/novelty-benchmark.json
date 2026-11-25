@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "title": "ResNet50 novelty scoring with and without PCA",
+  "scope": "Exploratory retrospective benchmark on the project dataset",
+  "unit": "Filename-derived scan group, not a verified patient ID",
+  "baselineLabel": "brain_glioma",
+  "imageCount": 6056,
+  "groupCount": 603,
+  "split": {
+    "seed": 42,
+    "trainGliomaGroups": 121,
+    "calibrationGliomaGroups": 40,
+    "testGliomaGroups": 40,
+    "testOtherGroups": 402,
+    "testOtherGroupsByClass": {
+      "brain_menin": 201,
+      "brain_tumor": 201
+    }
+  },
+  "method": {
+    "features": "Mean saved ImageNet ResNet50 embedding across crops in each scan group",
+    "score": "One minus cosine similarity to the nearest reference training group",
+    "threshold": "90th percentile of held-out glioma calibration scores",
+    "centering": "Subtract the glioma training mean and keep all dimensions",
+    "pca": "64 centered components fit on glioma training groups only",
+    "confusionMatrixOrder": [
+      "Glioma reference group",
+      "Other dataset group"
+    ],
+    "note": "All branches use the same train, calibration and test groups and scoring rule. Centering alone alters the cosine geometry, so differences between full and PCA features cannot be attributed to reducing dimensions alone. The original grayscale autoencoder experiment used a different representation, split and scorer. This benchmark does not establish performance on new scanners."
+  },
+  "results": {
+    "full": {
+      "dimension": 2048,
+      "threshold": 0.01046533,
+      "auroc": 1.0,
+      "balancedAccuracy": 0.9875,
+      "sensitivity": 1.0,
+      "specificity": 0.975,
+      "confusionMatrix": [
+        [
+          39,
+          1
+        ],
+        [
+          0,
+          402
+        ]
+      ]
+    },
+    "centered": {
+      "dimension": 2048,
+      "threshold": 0.63715453,
+      "auroc": 0.238246,
+      "balancedAccuracy": 0.4,
+      "sensitivity": 0.0,
+      "specificity": 0.8,
+      "confusionMatrix": [
+        [
+          32,
+          8
+        ],
+        [
+          402,
+          0
+        ]
+      ]
+    },
+    "pca64": {
+      "dimension": 64,
+      "threshold": 0.52874801,
+      "auroc": 0.361816,
+      "balancedAccuracy": 0.3625,
+      "sensitivity": 0.0,
+      "specificity": 0.725,
+      "confusionMatrix": [
+        [
+          29,
+          11
+        ],
+        [
+          402,
+          0
+        ]
+      ],
+      "explainedVarianceRatio": 0.928384
+    }
+  }
+}

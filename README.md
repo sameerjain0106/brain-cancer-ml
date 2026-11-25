@@ -205,3 +205,7 @@ Two infrastructure issues came up and were resolved:
 Neither of these should matter on a normal machine with regular internet
 access, but they're recorded here in case you hit either while
 reproducing this locally.
+
+## Interactive research site
+
+The [standalone site](web/README.md) lets visitors explore the original ResNet50 reference set with published examples or browser-local image comparison. It also documents the original findings and a grouped follow-up on how centering and PCA affect cosine novelty scores.

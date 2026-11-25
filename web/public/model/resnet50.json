@@ -1,0 +1,25 @@
+{
+  "source": "Keras ResNet50 ImageNet no-top weights",
+  "kerasWeightSha256": "66c8b43daff3fcc15bc4f30e3d2a167e21a14d9c9598a5394e5516471f4af504",
+  "sha256": "635c8ddeb0d59acd2c2b1577a8ca960b2a1cc511093436de0abc0fcab75f0d77",
+  "bytes": 47038148,
+  "input": "image",
+  "inputLayout": "NCHW",
+  "inputShape": [
+    1,
+    3,
+    512,
+    512
+  ],
+  "preprocessing": "RGB nearest-neighbor resize, then BGR with channel means subtracted",
+  "output": "features",
+  "outputShape": [
+    1,
+    2048
+  ],
+  "parityAgainstSavedEmbeddings": {
+    "samples": 9,
+    "minCosineSimilarity": 0.9999993443489075,
+    "maxRelativeL2Error": 0.0012020161375403404
+  }
+}
