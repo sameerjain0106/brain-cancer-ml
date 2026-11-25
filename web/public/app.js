@@ -6,6 +6,10 @@ const status = element("status");
 const image = element("query-image");
 const pick = element("pick-image");
 const upload = element("upload");
+const matchResult = element("match-result");
+const matchTitle = element("comparison-title");
+const matchAccent = element("match-accent");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const canvas = element("feature-map");
 const rankRows = element("rank-rows");
 const distanceButtons = Array.from(document.querySelectorAll("[data-distance]"));
@@ -23,11 +27,25 @@ let hoveredGroup = null;
 let chartPositions = [];
 let hoverFrame = 0;
 let rankButtons = [];
+let matchAnimation;
 
 function say(message, error = false, visible = true) {
   status.classList.toggle("sr-only", !visible);
   status.textContent = message;
   status.dataset.state = error ? "error" : "ready";
+}
+
+function showMatch(text, state = "waiting") {
+  matchAnimation?.cancel();
+  matchAnimation = undefined;
+  matchResult.dataset.state = state;
+  matchTitle.textContent = text;
+  if (state === "match" && !reducedMotion.matches && typeof matchAccent.animate === "function") {
+    matchAnimation = matchAccent.animate(
+      [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }],
+      { duration: 370, easing: "cubic-bezier(.2, .75, .2, 1)" },
+    );
+  }
 }
 
 function localAsset(path) {
@@ -262,7 +280,8 @@ function renderComparison(values, excludedIndex = -1) {
   const nearest = labels[best.label].name;
   const cutoff = reference.validation.nearestDistance.p95;
   const distant = features[0].distance > cutoff;
-  element("comparison-title").textContent = distant && excludedIndex === -1 ? "Distant reference match" : nearest;
+  if (distant && excludedIndex === -1) showMatch("Distant reference match", "distant");
+  else showMatch(nearest, "match");
   const proximity = element("reference-proximity");
   proximity.hidden = false;
   proximity.dataset.distant = String(distant);
@@ -348,7 +367,7 @@ function resetComparison(title, note) {
   comparison = null;
   resetInspection();
   element("reference-proximity").hidden = true;
-  element("comparison-title").textContent = title;
+  showMatch(title);
   element("comparison-note").textContent = note;
   element("rank-detail").textContent = note;
   rankRows.replaceChildren();
@@ -512,6 +531,7 @@ async function start() {
   } catch (error) {
     reference = null;
     samples.setAttribute("aria-busy", "false");
+    showMatch("Unavailable");
     say("The comparison files could not load. Refresh to retry. The original findings are below.", true);
     console.error(error);
   }

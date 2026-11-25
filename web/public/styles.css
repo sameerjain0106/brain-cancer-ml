@@ -53,16 +53,6 @@ html { scroll-behavior: smooth; }
 }
 .project-name p { margin-top: 12px; color: #4b6262; font-size: .98rem; }
 .scan-input { min-width: 0; text-align: center; }
-.specimen figcaption {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0 9px;
-  margin-top: 14px;
-  color: var(--muted);
-  font-size: .83rem;
-}
-.specimen figcaption strong { color: var(--ink); font-weight: 680; }
 .upload-button {
   position: relative;
   isolation: isolate;
@@ -113,9 +103,34 @@ html { scroll-behavior: smooth; }
 }
 .upload-arrow { font-size: 1.25em; line-height: 1; color: #79331f; }
 .input-hint, .status { color: var(--muted); font-size: .78rem; line-height: 1.42; }
-.input-hint { margin-top: 4px; }
+.input-hint { margin-top: 14px; }
 .status { margin-top: 8px; }
 .status[data-state="error"], .proximity[data-distant="true"] { color: var(--accent-ink); }
+.match-result { margin-top: 12px; min-block-size: clamp(4.25rem, 7.2vw, 5.5rem); }
+.reading-label { display: block; color: #39555a; font-size: .88rem; font-weight: 630; }
+.match-title {
+  position: relative;
+  isolation: isolate;
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 3px;
+  padding-inline: .09em;
+  color: #174950;
+  font: 630 clamp(2.1rem, 3.8vw, 3.35rem)/1.05 var(--display);
+  letter-spacing: -.045em;
+}
+.match-title strong { font-weight: inherit; }
+.match-result:not([data-state="match"]) .match-title { font-size: clamp(1.26rem, 2.6vw, 1.85rem); letter-spacing: -.027em; }
+.match-result[data-state="distant"] .match-title { color: var(--accent-ink); }
+#match-accent {
+  position: absolute;
+  inset: auto 0 .015em;
+  height: .19em;
+  background: #fac18e;
+  transform-origin: left;
+  z-index: -1;
+}
+.match-result:not([data-state="match"]) #match-accent { display: none; }
 
 .examples { justify-self: end; width: min(100%, 252px); }
 #samples-label { margin-bottom: 8px; font-weight: 660; font-size: .92rem; }
@@ -157,8 +172,6 @@ html { scroll-behavior: smooth; }
 }
 #rank-detail { color: var(--muted); font-size: .97rem; margin-top: 10px; max-width: 44ch; }
 .reference-reading { margin-top: clamp(20px, 4vw, 47px); max-width: 35ch; }
-.reading-label { color: var(--muted); font-size: .79rem; }
-.reference-reading h3 { font-size: 1.3rem; font-weight: 650; line-height: 1.27; margin: 3px 0 6px; }
 #comparison-note, .proximity { color: var(--muted); font-size: .82rem; line-height: 1.4; }
 .proximity { margin-top: 6px; }
 
@@ -255,7 +268,6 @@ main .research-evidence .record-open p { max-width: 60ch; }
   .project-name p { margin-top: 7px; font-size: .86rem; }
   .scan-input { width: min(100% - 16px, 348px); }
   .upload-action { font-size: clamp(.94rem, 4.75vw, 1.17rem); }
-  .specimen figcaption { margin-top: 13px; }
   .examples { justify-self: center; width: min(100%, 380px); }
   #samples-label { font-size: .84rem; text-align: center; margin-bottom: 4px; }
   .sample-list { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }

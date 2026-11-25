@@ -28,13 +28,17 @@
               </span>
               <span class="upload-action"><span class="upload-arrow" aria-hidden="true">↑</span> <span id="upload-label">Upload an MRI image</span></span>
             </button>
-            <figcaption>
+            <figcaption class="sr-only">
               <strong id="image-origin">Glioma example</strong>
               <span id="image-caption">Published MRI crop</span>
             </figcaption>
           </figure>
           <input id="upload" type="file" accept="image/png,image/jpeg" hidden>
           <p class="input-hint" id="upload-hint">JPG or PNG. The image stays on your device.</p>
+          <p class="match-result" id="match-result" role="status" data-state="waiting">
+            <span class="reading-label">Closest dataset match</span>
+            <span class="match-title"><strong id="comparison-title">–</strong><span id="match-accent" aria-hidden="true"></span></span>
+          </p>
           <p class="status" id="status" role="status" aria-live="polite">Loading the reference set…</p>
         </div>
         <div class="examples">
@@ -49,9 +53,7 @@
             <h2 id="ranking-title">Nearest scan groups</h2>
             <p id="rank-detail" role="status">Ranks appear here when an image is ready.</p>
           </header>
-          <div class="reference-reading" aria-labelledby="comparison-title">
-            <p class="reading-label">Closest label across all features</p>
-            <h3 id="comparison-title">–</h3>
+          <div class="reference-reading">
             <p id="comparison-note">Select a crop to make a comparison.</p>
             <p class="proximity" id="reference-proximity" hidden></p>
           </div>
