@@ -59,7 +59,7 @@ function drawMap() {
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   context.clearRect(0, 0, width, height);
   const padding = 22;
-  context.strokeStyle = "#d1cc9d";
+  context.strokeStyle = "#d1d5e8";
   context.beginPath();
   for (let step = 0; step <= 5; step += 1) {
     const x = padding + (width - 2 * padding) * step / 5;
@@ -97,7 +97,7 @@ function drawMap() {
   const inspectedIndex = hoveredGroup ?? pinnedGroup;
   if (inspectedIndex !== null && chartPositions[inspectedIndex]) {
     const [x, y] = chartPositions[inspectedIndex];
-    context.strokeStyle = "#17152c";
+    context.strokeStyle = "#151a56";
     context.beginPath();
     context.moveTo(x, padding);
     context.lineTo(x, height - padding);
@@ -119,7 +119,7 @@ function drawMap() {
     const group = groups[match.index];
     const [gx, gy] = position(group.x, group.y);
     context.setLineDash([3, 4]);
-    context.strokeStyle = "#37344f8c";
+    context.strokeStyle = "#2935699d";
     context.beginPath();
     context.moveTo(qx, qy);
     context.lineTo(gx, gy);
@@ -132,7 +132,7 @@ function drawMap() {
   }
   context.strokeStyle = "#ffffff";
   context.lineWidth = 2;
-  context.fillStyle = "#17152c";
+  context.fillStyle = "#151a56";
   context.beginPath();
   context.arc(qx, qy, 6, 0, Math.PI * 2);
   context.fill();
@@ -271,6 +271,7 @@ function useSample(sample, animate = false) {
   }
   pick.disabled = false;
   markSelection(sample.id);
+  element("atlas-link-text").textContent = "See the reference atlas";
   showImage(localAsset(sample.imagePath).href, "Published MRI project crop labeled " + labels[sample.label].name,
     "Published example", "This crop uses its saved ResNet50 features.");
   if (animate && !reducedMotion.matches && typeof image.animate === "function") {
@@ -299,6 +300,7 @@ function ensureWorker() {
       }
       try {
         renderComparison(data.features);
+        element("atlas-link-text").textContent = "See your crop in the atlas";
         say("Comparison complete. The image stayed on this device.");
       } catch (error) {
         resetComparison("Unavailable", "Try another crop.");

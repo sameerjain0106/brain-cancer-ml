@@ -3,176 +3,183 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#edebc7">
+  <meta name="theme-color" content="#0b0c13">
   <meta name="description" content="Explore the representations and results behind Sameer Jain’s brain tumor MRI research project.">
   <title>Brain Tumor MRI Research | Sameer Jain</title>
   <link rel="icon" type="image/png" href="./favicon.png">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./evidence.css">
   <script type="module" src="./app.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#explorer">Skip to MRI explorer</a>
-  <header class="site-header">
-    <div class="wrap header-inner">
-      <a class="brand" href="./" aria-label="Brain tumor MRI research home">MRI Research</a>
-      <nav aria-label="Research sections">
-        <a href="#explorer">Explore</a>
-        <a href="#results">Results</a>
-        <a href="#method">Methods</a>
-      </nav>
-      <a class="repo-link" href="https://github.com/sameerjain0106/brain-cancer-ml">GitHub <span aria-hidden="true">↗</span></a>
-    </div>
-  </header>
+  <main>
+    <section class="film" id="explorer" aria-labelledby="page-title">
+      <header class="film-masthead">
+        <a class="author" href="https://musteermain.vercel.app">Sameer Jain <span aria-hidden="true">↗</span></a>
+        <nav aria-label="Research sections">
+          <a href="#atlas">Atlas</a>
+          <a href="#results">Results</a>
+          <a href="https://github.com/sameerjain0106/brain-cancer-ml">GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </header>
 
-  <main class="wrap">
-    <section class="intro" id="explorer" aria-labelledby="page-title">
-      <div>
+      <div class="film-title">
         <h1 id="page-title">Brain tumor <em>MRI</em></h1>
-        <p class="byline">Research explorer by Sameer Jain</p>
+        <p>Compare an MRI crop with the images from the original study.</p>
+        <a class="atlas-link" href="#atlas"><span aria-hidden="true">↓</span> <span id="atlas-link-text">See the reference atlas</span></a>
       </div>
-      <div class="intro-note">
-        <p class="lede">How does a crop look to ResNet50? Place it among <strong>603 reference groups</strong> from the original project.</p>
-        <a class="text-link" href="#results">Read the results <span aria-hidden="true">↓</span></a>
+
+      <figure class="film-photo" aria-labelledby="image-title">
+        <div class="scan-frame">
+          <img id="query-image" src="./research/example-glioma.png" alt="Published MRI project crop labeled Glioma">
+          <div id="scan-empty" hidden>Select an example to explore</div>
+        </div>
+        <figcaption class="film-caption">
+          <span id="image-title" class="sr-only">Selected MRI crop</span>
+          <span id="image-origin">Published example</span>
+          <span id="image-caption">Glioma crop from the original study.</span>
+        </figcaption>
+      </figure>
+
+      <div class="film-controls">
+        <span class="sr-only" id="samples-label">Published MRI examples</span>
+        <div class="sample-list" id="samples" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
+        <div class="file-choice">
+          <button class="upload-button" id="pick-image" type="button" disabled><span aria-hidden="true">＋</span> Compare crop</button>
+          <input id="upload" type="file" accept="image/png,image/jpeg" hidden>
+          <p class="input-hint">JPG or PNG · on-device comparison</p>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite">Loading reference data…</p>
       </div>
     </section>
 
-    <section class="explorer" aria-labelledby="workspace-title">
-      <h2 id="workspace-title" class="sr-only">MRI comparison workspace</h2>
-      <div class="work-grid">
-        <aside class="input-bar" aria-labelledby="samples-label">
-          <h3 id="samples-label">Contact sheet</h3>
-          <div id="samples" class="sample-list" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
-          <div class="upload-control">
-            <button class="upload-button" id="pick-image" type="button" disabled><span aria-hidden="true">＋</span> Compare crop</button>
-            <input id="upload" type="file" accept="image/png,image/jpeg" hidden>
-            <p class="input-hint">JPG or PNG. Image stays on your device.</p>
-          </div>
-          <p id="status" class="status" role="status" aria-live="polite">Loading the reference set…</p>
-        </aside>
-        <figure class="image-pane" aria-labelledby="image-title">
-          <div class="pane-head">
-            <figcaption id="image-title">Selected crop</figcaption>
-            <span class="pane-note" id="image-origin">Published sample</span>
-          </div>
-          <div class="scan-frame">
-            <img id="query-image" src="./research/example-glioma.png" alt="Published MRI project crop labeled Glioma">
-            <div id="scan-empty" class="scan-empty" hidden>Select a sample to explore</div>
-          </div>
-          <p id="image-caption" class="image-caption">Published glioma example.</p>
-        </figure>
-        <section class="map-pane" aria-labelledby="map-title">
-          <div class="pane-head">
-            <h2 id="map-title">Reference atlas</h2>
-            <span class="pane-note">603 groups</span>
-          </div>
-          <div class="map-shell" id="map-shell">
-            <canvas id="feature-map" role="img" aria-describedby="map-description"></canvas>
-            <p class="axis axis-x" aria-hidden="true">PC 1</p>
-            <p class="axis axis-y" aria-hidden="true">PC 2</p>
-          </div>
-          <p id="map-description" class="sr-only">A scatter plot of reference scan groups in the first two principal components, colored by dataset label.</p>
-          <div class="legend" id="legend" aria-label="Dataset label colors"></div>
-          <p class="map-inspection" id="map-inspection">Select a point or choose a match below.</p>
-          <p class="map-caption" id="map-caption">Two dimensions for the plot. All 2,048 features for the comparison.</p>
-        </section>
-      </div>
-      <section class="comparison" aria-labelledby="comparison-title">
-        <div class="comparison-lead">
+    <section class="atlas" id="atlas" aria-labelledby="map-title">
+      <div class="atlas-intro wrap">
+        <div class="atlas-title">
+          <h2 id="map-title">Reference atlas</h2>
+          <p>603 groups from the original study, positioned by their ResNet50 features.</p>
+        </div>
+        <div class="comparison-lead" aria-labelledby="comparison-title">
           <p class="label">Closest dataset label</p>
-          <h2 id="comparison-title">–</h2>
-          <p class="subtle" id="comparison-note">Select a sample to explore the distance between feature vectors.</p>
+          <h3 id="comparison-title">–</h3>
+          <p id="comparison-note">Select a crop to compare it with the reference groups.</p>
           <p class="proximity" id="reference-proximity" hidden></p>
         </div>
-        <div class="comparison-list">
-          <div class="list-header"><h3>Closest groups</h3><span>Cosine distance ↓</span></div>
-          <ol id="matches"></ol>
-        </div>
-      </section>
-    </section>
-
-    <section id="results" class="results" aria-labelledby="findings-title">
-      <div class="section-heading">
-        <h2 id="findings-title">What held up?</h2>
-        <p>Three ways to read the same collection of 6,056 MRI images.</p>
       </div>
-      <article class="finding" id="supervised">
-        <div>
-          <p class="finding-metric">72.7<span>%</span></p>
-          <p class="metric-label">Historical accuracy</p>
-        </div>
-        <div>
-          <h3>Supervised classification</h3>
-          <p>Flattened grayscale pixels were reduced to 1,000 principal components, then classified with logistic regression, K-nearest neighbors, and random forest. The 900-tree forest reached 72.7% accuracy and 0.729 F1 in the original run.</p>
-          <p class="finding-detail">PCA was fit before the split and settings were explored on the test set. The original loop read 2,004 images per class, leaving 44 images from the “Tumor” folder unused. Treat the preserved score as a historical baseline.</p>
-          <a href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/supervised_classification.ipynb">Open supervised notebook <span aria-hidden="true">↗</span></a>
-        </div>
-      </article>
-      <article class="finding" id="clustering">
-        <div>
-          <p class="finding-metric">1.00</p>
-          <p class="metric-label">Adjusted Rand Index</p>
-        </div>
-        <div>
-          <h3>ResNet50 clustering</h3>
-          <p>Average-pooled ImageNet features map each 512 × 512 crop to 2,048 numbers. The experiment averaged crops by filename-derived scan ID and fit three K-means clusters. The corrected analysis kept source labels separate from cluster assignments. All 603 groups aligned with their source classes in that fit.</p>
-          <p class="finding-detail">This is separation within one dataset. The groups are filename-derived and the study has no external scanner or hospital validation.</p>
-          <a href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/clustering_analysis.ipynb">Open clustering notebook <span aria-hidden="true">↗</span></a>
-          <details class="evidence">
-            <summary>See the original clustering figures</summary>
-            <div class="figures">
-              <figure><img src="./research/cluster_vs_true_label_confusion_matrix.png" alt="Aligned clustering confusion matrix with 201 groups per class on the diagonal" loading="lazy"><figcaption>Cluster assignments aligned to dataset labels</figcaption></figure>
-              <figure><img src="./research/elbow_plot.png" alt="Within-cluster sum of squares compared across cluster counts" loading="lazy"><figcaption>Elbow plot used to choose three clusters</figcaption></figure>
-            </div>
-          </details>
-        </div>
-      </article>
-      <article class="finding finding-anomaly" id="anomaly">
-        <div>
-          <p class="finding-metric">50<span>%</span></p>
-          <p class="metric-label">Corrected accuracy</p>
-        </div>
-        <div>
-          <h3>The anomaly test</h3>
-          <p>A convolutional autoencoder learned from 128 × 128 grayscale glioma images. PCA compressed its latent activations to 100 components, then Mahalanobis distance measured how far an image fell from the training distribution. This branch used no ResNet50 features.</p>
-          <p class="finding-detail">Splitting glioma images before training removed overlap between training and evaluation. Accuracy dropped to 50% across 400 held-out glioma crops and 4,052 other crops. The study retained the autoencoder, PCA, and distance rule, so this result cannot isolate why separation was weak.</p>
-          <a href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/anomaly_detection.ipynb">Open anomaly notebook <span aria-hidden="true">↗</span></a>
-          <details class="evidence" open>
-            <summary>See the corrected anomaly results</summary>
-            <div class="figures">
-              <figure><img src="./research/anomaly_confusion_matrix.png" alt="Anomaly detection confusion matrix for held-out glioma and other dataset classes" loading="lazy"><figcaption>Confusion matrix after removing training overlap</figcaption></figure>
-              <figure><img src="./research/distance_distribution.png" alt="Overlapping distribution of anomaly distances by dataset label" loading="lazy"><figcaption>Distance distributions and the threshold</figcaption></figure>
-            </div>
-          </details>
-        </div>
-      </article>
-      <article class="followup" id="pca-followup" hidden>
-        <h3>Centering changed the result.</h3>
-        <p id="followup-description"></p>
-        <div class="table-wrap"><table id="followup-table"><thead><tr><th scope="col">Representation</th><th scope="col">AUROC</th><th scope="col">Balanced accuracy</th></tr></thead><tbody></tbody></table></div>
-        <p id="followup-note" class="subtle"></p>
-      </article>
+
+      <div class="map-shell" id="map-shell">
+        <canvas id="feature-map" role="img" aria-describedby="map-description"></canvas>
+        <p class="axis axis-x" aria-hidden="true">PC 1</p>
+        <p class="axis axis-y" aria-hidden="true">PC 2</p>
+      </div>
+      <p id="map-description" class="sr-only">A scatter plot of reference scan groups in the first two principal components, colored by dataset label.</p>
+
+      <div class="atlas-key wrap">
+        <div class="legend" id="legend" aria-label="Dataset label colors"></div>
+        <p class="map-inspection" id="map-inspection">Select a point or choose a match below.</p>
+      </div>
+      <div class="comparison-list wrap">
+        <div class="list-header"><h3>Closest groups</h3><span>Cosine distance</span></div>
+        <ol id="matches"></ol>
+        <p class="map-caption" id="map-caption">Two dimensions for the plot. All 2,048 features for the comparison.</p>
+      </div>
     </section>
 
-    <section id="method" class="method" aria-labelledby="method-title">
-      <div class="section-heading">
+    <section id="results" class="research-evidence" aria-labelledby="findings-title">
+      <div class="record-wrap">
+        <header class="record-open">
+          <h2 id="findings-title">What held up?</h2>
+          <p>Three ways to read the same collection of 6,056 MRI images.</p>
+        </header>
+
+        <article id="anomaly" class="record-anomaly" aria-labelledby="record-anomaly-title">
+          <div class="record-story">
+            <h3 id="record-anomaly-title">The anomaly test</h3>
+            <p class="record-anomaly-lede">Accuracy fell to <strong>50%</strong> when glioma images were split before training. Evaluation used 400 held-out glioma crops and 4,052 other crops.</p>
+            <p>A convolutional autoencoder learned from 128 × 128 grayscale glioma images. PCA compressed its latent activations to 100 components, then Mahalanobis distance measured how far each image fell from the training distribution. This branch used a separate representation from ResNet50.</p>
+            <p class="record-caveat">The study retained the autoencoder, PCA, and distance rule after removing the train–test overlap. This result cannot isolate why separation was weak.</p>
+            <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/anomaly_detection.ipynb">Open anomaly notebook <span aria-hidden="true">↗</span></a>
+          </div>
+          <div>
+            <figure class="record-plate">
+              <img src="./research/anomaly_confusion_matrix.png" alt="Anomaly confusion matrix. Of 400 held-out glioma crops, 357 were called glioma-like and 43 anomalies. Of 4,052 other crops, 2,204 were called glioma-like and 1,848 anomalies." loading="lazy">
+              <figcaption>Confusion matrix after separating training and evaluation crops.</figcaption>
+            </figure>
+            <details class="record-detail">
+              <summary>Compare the distance distributions</summary>
+              <figure class="record-plate">
+                <img src="./research/distance_distribution.png" alt="Overlapping distribution of anomaly distances by dataset label" loading="lazy">
+                <figcaption>Distance distributions and the decision threshold.</figcaption>
+              </figure>
+            </details>
+          </div>
+        </article>
+
+        <div class="record-secondary">
+          <article id="clustering" class="record-clustering" aria-labelledby="record-clustering-title">
+            <figure class="record-plate">
+              <img src="./research/cluster_vs_true_label_confusion_matrix.png" alt="Clustering confusion matrix aligned to dataset labels, with 201 groups per class on the diagonal" loading="lazy">
+              <figcaption>All 603 groups aligned with their source labels in this fit.</figcaption>
+            </figure>
+            <div class="record-story">
+              <h3 id="record-clustering-title">ResNet50 clustering</h3>
+              <p>The corrected analysis kept source labels separate from cluster assignments and reached an <strong>Adjusted Rand Index of 1.00</strong>. Average-pooled ImageNet features map each 512 × 512 crop to 2,048 numbers. The experiment averaged those features by filename-derived scan ID before fitting three K-means clusters.</p>
+              <p class="record-caveat">The groups are filename-derived. The observed separation comes from this collection and has not been evaluated on data from another scanner or hospital.</p>
+              <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/clustering_analysis.ipynb">Open clustering notebook <span aria-hidden="true">↗</span></a>
+              <details class="record-detail">
+                <summary>See how the number of clusters was chosen</summary>
+                <figure class="record-plate">
+                  <img src="./research/elbow_plot.png" alt="Within-cluster sum of squares compared across cluster counts" loading="lazy">
+                  <figcaption>The elbow plot used to choose three clusters.</figcaption>
+                </figure>
+              </details>
+            </div>
+          </article>
+
+          <article id="supervised" class="record-supervised record-story" aria-labelledby="record-supervised-title">
+            <h3 id="record-supervised-title">Supervised classification</h3>
+            <p>The 900-tree random forest reached <strong>72.7% accuracy</strong> and <strong>0.729 F1</strong> in the original run. The study reduced flattened grayscale pixels to 1,000 principal components, then compared logistic regression, K-nearest neighbors, and random forest.</p>
+            <p class="record-caveat">PCA was fit before the split and settings were explored on the test set. The original loop read 2,004 images per class, leaving 44 images from the “Tumor” folder unused. The preserved score is a historical baseline.</p>
+            <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/supervised_classification.ipynb">Open supervised notebook <span aria-hidden="true">↗</span></a>
+          </article>
+        </div>
+
+        <article class="record-followup" id="pca-followup" hidden>
+          <h3>Centering changed the result.</h3>
+          <p id="followup-description"></p>
+          <div class="record-table">
+            <table id="followup-table">
+              <thead><tr><th scope="col">Representation</th><th scope="col">AUROC</th><th scope="col">Balanced accuracy</th></tr></thead><tbody></tbody>
+            </table>
+          </div>
+          <p id="followup-note" class="record-caveat"></p>
+        </article>
+      </div>
+    </section>
+
+    <section id="method" class="processing" aria-labelledby="method-title">
+      <div class="record-wrap">
         <h2 id="method-title">How the explorer works</h2>
-        <p>Follow the image from pixels to its nearest reference group.</p>
+        <p class="processing-lede">Follow the image from pixels to its nearest reference group.</p>
+        <ol class="processing-flow">
+          <li><h3>Prepare the crop</h3><p>Resize to 512 × 512 using the original nearest-neighbor sampling. Convert RGB to BGR and subtract the ImageNet channel means.</p></li>
+          <li><h3>Extract features</h3><p>Run the Keras ImageNet ResNet50 backbone without its classification head. Global average pooling produces one 2,048-dimensional vector.</p></li>
+          <li><h3>Compare groups</h3><p>Rank the original scan-group mean vectors by cosine distance. The dataset label belongs to the closest reference group. Published examples exclude their own group from matching.</p></li>
+        </ol>
+        <div class="processing-validation" id="reference-validation" hidden></div>
+        <p class="processing-note">“Tumor” is the dataset’s folder label. The explorer is for de-identified research crops. Similarity to a reference group does not establish a diagnosis.</p>
       </div>
-      <ol class="method-list">
-        <li><h3>Prepare the crop</h3><p>Resize to 512 × 512 using the original nearest-neighbor sampling. Convert RGB to BGR and subtract the ImageNet channel means.</p></li>
-        <li><h3>Extract features</h3><p>Run the Keras ImageNet ResNet50 backbone without its classification head. Global average pooling produces one 2,048-dimensional vector.</p></li>
-        <li><h3>Compare groups</h3><p>Rank the original scan-group mean vectors by cosine distance. The dataset label belongs to the closest reference group. Published examples exclude their own group from matching.</p></li>
-      </ol>
-      <div class="validation-note" id="reference-validation" hidden></div>
-      <p class="research-note">“Tumor” is the dataset’s folder label. The explorer is for de-identified research crops. Similarity to a reference group does not establish a diagnosis.</p>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="wrap footer-inner">
-      <span>Brain tumor MRI research · Sameer Jain</span>
-      <a href="https://github.com/sameerjain0106/brain-cancer-ml">Project files <span aria-hidden="true">↗</span></a>
-      <a href="https://musteermain.vercel.app">Portfolio <span aria-hidden="true">↗</span></a>
+  <footer class="research-footer">
+    <div class="record-wrap record-end">
+      <p>Brain tumor MRI research · Sameer Jain</p>
+      <div class="record-end-links">
+        <a href="https://github.com/sameerjain0106/brain-cancer-ml">Project files <span aria-hidden="true">↗</span></a>
+        <a href="https://musteermain.vercel.app">Portfolio <span aria-hidden="true">↗</span></a>
+      </div>
     </div>
   </footer>
 </body>

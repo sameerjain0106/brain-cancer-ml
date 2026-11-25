@@ -1,0 +1,349 @@
+
+.record-wrap {
+  width: min(1220px, calc(100% - 70px));
+  margin-inline: auto;
+}
+
+.research-evidence {
+  background: var(--paper);
+  color: var(--ink);
+  padding-block: clamp(3.5rem, 8vw, 8.5rem);
+}
+
+.research-evidence h2,
+.processing h2 {
+  font-family: var(--display, inherit);
+  font-size: clamp(3rem, 7.7vw, 7rem);
+  font-weight: 700;
+  letter-spacing: -.06em;
+  line-height: .96;
+  margin: 0;
+}
+
+.record-open {
+  padding-bottom: clamp(2rem, 5vw, 4.75rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink), transparent 72%);
+}
+
+.record-open p {
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  margin: 1rem 0 0;
+}
+
+.research-evidence h3,
+.processing h3 {
+  font-family: var(--display, inherit);
+  font-size: clamp(1.65rem, 4vw, 3.1rem);
+  font-weight: 670;
+  line-height: 1.06;
+  letter-spacing: -.038em;
+  margin: 0 0 .7em;
+}
+
+.record-story {
+  line-height: 1.65;
+}
+
+.record-story > p + p {
+  margin-top: .85em;
+}
+
+.record-caveat {
+  color: var(--muted);
+}
+
+.record-source {
+  display: inline-block;
+  margin-top: 1.15rem;
+  font-size: .9rem;
+  font-weight: 650;
+  color: var(--sea);
+  text-decoration: underline;
+  text-underline-offset: .24em;
+}
+
+.record-source:hover {
+  text-decoration-thickness: 2px;
+}
+
+.record-anomaly {
+  display: grid;
+  grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
+  align-items: center;
+  gap: clamp(1.5rem, 5.5vw, 6rem);
+  padding-block: clamp(2.15rem, 6vw, 6rem);
+}
+
+.record-anomaly > .record-story {
+  max-width: 49ch;
+}
+
+.record-anomaly-lede {
+  font-size: clamp(1.05rem, 1.85vw, 1.3rem);
+  line-height: 1.48;
+}
+
+.record-plate {
+  margin: 0;
+  min-width: 0;
+}
+
+.record-plate img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: white;
+}
+
+.record-plate figcaption {
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.45;
+  margin-top: .75rem;
+}
+
+.record-detail {
+  margin-top: 1.2rem;
+}
+
+.record-detail summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 650;
+}
+
+.record-detail .record-plate {
+  margin-block: .5rem 1rem;
+  max-width: 31rem;
+}
+
+.record-secondary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, .85fr);
+  gap: clamp(1.5rem, 6vw, 6.5rem);
+  align-items: start;
+  border-top: 1px solid color-mix(in srgb, var(--ink), transparent 72%);
+  padding-block: clamp(2rem, 5vw, 4.75rem);
+}
+
+.record-clustering > .record-plate {
+  max-width: 34rem;
+  margin-bottom: 1.6rem;
+}
+
+.record-clustering > .record-story {
+  max-width: 64ch;
+}
+
+.record-supervised {
+  padding-top: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+.record-supervised h3 {
+  padding-top: 1rem;
+  border-top: 3px solid var(--sea);
+}
+
+.record-followup {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: .75rem clamp(1.5rem, 5vw, 5rem);
+  align-items: start;
+  padding-block: clamp(2rem, 5vw, 4.5rem) 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink), transparent 72%);
+}
+
+.record-followup h3 {
+  grid-column: 1 / -1;
+  margin-bottom: .2rem;
+}
+
+.record-followup > p {
+  max-width: 60ch;
+}
+
+.record-followup .record-table {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+}
+
+.record-followup .record-table table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.record-table th,
+.record-table td {
+  overflow-wrap: anywhere;
+  padding: .65rem .55rem .65rem 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink), transparent 72%);
+  font-size: .9rem;
+}
+
+.record-table th:first-child {
+  width: 48%;
+}
+
+.record-followup .score-fill {
+  height: 4px;
+  background: color-mix(in srgb, var(--sea), transparent 83%);
+  margin-top: 4px;
+}
+
+.record-followup .score-fill::before {
+  content: "";
+  display: block;
+  width: var(--score, 0%);
+  height: 100%;
+  background: var(--sea);
+}
+
+.processing {
+  background: var(--sea);
+  color: var(--paper);
+  padding-block: clamp(3.15rem, 8vw, 7rem);
+}
+
+.processing h2 {
+  max-width: 11ch;
+}
+
+.processing-lede {
+  max-width: 45ch;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  margin: 1.2rem 0 2.4rem;
+}
+
+.processing-flow {
+  list-style: none;
+  counter-reset: step;
+  max-width: 90ch;
+  padding: 0;
+  margin: 0;
+}
+
+.processing-flow li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, .77fr) minmax(0, 1.23fr);
+  gap: .5rem 1rem;
+  padding-block: 1.05rem;
+  border-top: 1px solid color-mix(in srgb, var(--paper), transparent 65%);
+}
+
+.processing-flow li::before {
+  content: counter(step, decimal-leading-zero);
+  color: var(--acid);
+  font-size: .86rem;
+  font-variant-numeric: tabular-nums;
+  padding-top: .13em;
+}
+
+.processing-flow h3 {
+  margin: 0;
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+}
+
+.processing-flow p {
+  line-height: 1.55;
+}
+
+.processing-validation,
+.processing-note {
+  max-width: 83ch;
+  font-size: .93rem;
+  line-height: 1.55;
+  margin: 1rem 0 0;
+}
+
+.processing-note {
+  color: var(--acid);
+}
+
+.research-footer {
+  background: var(--sea);
+  color: var(--paper);
+}
+
+.record-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .75rem 1.5rem;
+  justify-content: space-between;
+  padding-block: 1.25rem 1.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--paper), transparent 65%);
+  font-size: .88rem;
+}
+
+.record-end p {
+  margin: 0;
+}
+
+.record-end-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.35rem;
+}
+
+.record-end a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: .23em;
+}
+
+.record-end a:hover {
+  color: var(--acid);
+}
+
+@media (max-width: 760px) {
+  .record-anomaly,
+  .record-secondary,
+  .record-followup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .record-anomaly > .record-story {
+    max-width: 66ch;
+  }
+
+  .record-anomaly > .record-plate {
+    width: min(100%, 32rem);
+  }
+
+  .record-supervised {
+    max-width: 48ch;
+    padding-top: .15rem;
+  }
+
+  .record-followup .record-table {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .record-wrap {
+    width: calc(100% - 30px);
+  }
+
+  .processing-flow li {
+    grid-template-columns: 1.6rem minmax(0, 1fr);
+  }
+
+  .processing-flow p {
+    grid-column: 2;
+  }
+
+  .record-end {
+    justify-content: flex-start;
+  }
+}
