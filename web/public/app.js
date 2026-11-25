@@ -7,6 +7,7 @@ const image = element("query-image");
 const pick = element("pick-image");
 const upload = element("upload");
 const matchResult = element("match-result");
+const matchLabel = element("match-label");
 const matchTitle = element("comparison-title");
 const matchAccent = element("match-accent");
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -35,8 +36,9 @@ function showMatch(text, state = "waiting") {
   matchAnimation?.cancel();
   matchAnimation = undefined;
   matchResult.dataset.state = state;
+  matchLabel.textContent = state === "distant" ? "Distant reference match. Closest dataset label" : "Closest dataset match";
   matchTitle.textContent = text;
-  if (state === "match" && !reducedMotion.matches && typeof matchAccent.animate === "function") {
+  if (state !== "waiting" && !reducedMotion.matches && typeof matchAccent.animate === "function") {
     matchAnimation = matchAccent.animate(
       [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }],
       { duration: 370, easing: "cubic-bezier(.2, .75, .2, 1)" },
@@ -199,8 +201,7 @@ function renderComparison(values, excludedIndex = -1) {
   queryCoordinates = project(query, reference.projection);
   const nearest = labels[reference.groups[best.index].label].name;
   const distant = best.distance > reference.validation.nearestDistance.p95;
-  if (distant && excludedIndex === -1) showMatch("Distant reference match", "distant");
-  else showMatch(nearest, "match");
+  showMatch(nearest, distant && excludedIndex === -1 ? "distant" : "match");
 
   const proximity = element("reference-proximity");
   proximity.hidden = false;

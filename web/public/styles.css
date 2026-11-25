@@ -119,8 +119,8 @@ html { scroll-behavior: smooth; }
   letter-spacing: -.045em;
 }
 .match-title strong { font-weight: inherit; }
-.match-result:not([data-state="match"]) .match-title { font-size: clamp(1.26rem, 2.6vw, 1.85rem); letter-spacing: -.027em; }
-.match-result[data-state="distant"] .match-title { color: var(--accent-ink); }
+.match-result[data-state="waiting"] .match-title { font-size: clamp(1.26rem, 2.6vw, 1.85rem); letter-spacing: -.027em; }
+.match-result[data-state="distant"] .reading-label { color: var(--accent-ink); }
 #match-accent {
   position: absolute;
   inset: auto 0 .015em;
@@ -129,7 +129,7 @@ html { scroll-behavior: smooth; }
   transform-origin: left;
   z-index: -1;
 }
-.match-result:not([data-state="match"]) #match-accent { display: none; }
+.match-result[data-state="waiting"] #match-accent { display: none; }
 
 .examples { justify-self: end; width: min(100%, 252px); }
 #samples-label { margin-bottom: 8px; font-weight: 660; font-size: .92rem; }
