@@ -18,7 +18,6 @@ const mapButtons = Array.from(document.querySelectorAll("[data-map-label]"));
 const mapModes = Array.from(document.querySelectorAll("[data-map-mode]"));
 const mapClusterCount = element("map-cluster-count");
 const mapQueryPulse = element("map-query-pulse");
-const isPortfolioExplorer = document.documentElement.hasAttribute("data-portfolio-embed");
 let mapMode = "labels";
 let mapLabel = "all";
 let mapBounds;
@@ -480,9 +479,7 @@ function renderFollowup(report) {
 }
 
 async function start() {
-  if (!isPortfolioExplorer) {
-    loadAsset("research/novelty-benchmark.json", "json").then(renderFollowup).catch(() => {});
-  }
+  loadAsset("research/novelty-benchmark.json", "json").then(renderFollowup).catch(() => {});
   try {
     reference = await loadAsset("research/reference.json", "json");
     vectors = new Float32Array(await loadAsset(reference.embeddingPath, "arrayBuffer"));
@@ -521,9 +518,7 @@ async function start() {
     element("map-summary").textContent = "The scan groups could not load. Refresh to retry.";
     samples.setAttribute("aria-busy", "false");
     showMatch("Unavailable");
-    say(isPortfolioExplorer
-      ? "The comparison files could not load. Refresh to retry."
-      : "The comparison files could not load. Refresh to retry. The original findings are below.", true);
+    say("The comparison files could not load. Refresh to retry. The original findings are below.", true);
     console.error(error);
   }
 }

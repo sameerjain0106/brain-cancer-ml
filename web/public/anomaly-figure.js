@@ -100,7 +100,7 @@ async function mountFigure(figure, fallback) {
 }
 
 const figure = document.getElementById("anomaly-chart");
-if (figure && !document.documentElement.hasAttribute("data-portfolio-embed")) {
+if (figure) {
   mountFigure(figure, document.getElementById("anomaly-static")).catch(() => {
     // Keep the original figure visible when the published metrics cannot load.
   });
