@@ -7,8 +7,7 @@ const image = element("query-image");
 const pick = element("pick-image");
 const upload = element("upload");
 const canvas = element("feature-map");
-const rankLists = { features: element("feature-ranks"), map: element("map-ranks") };
-const rankCanvas = element("rank-links");
+const rankRows = element("rank-rows");
 const distanceButtons = Array.from(document.querySelectorAll("[data-distance]"));
 let distanceMode = "features";
 let reference;
@@ -190,9 +189,10 @@ function inspectGroup() {
     : "Select a point or a match.";
   note.dataset.inspecting = String(Boolean(group));
   for (const button of rankButtons) {
-    button.dataset.linked = String(Number(button.dataset.groupIndex) === index);
+    const linked = String(Number(button.dataset.groupIndex) === index);
+    button.dataset.linked = linked;
+    button.closest("tr").dataset.linked = linked;
   }
-  drawRankLinks();
   drawMap();
 }
 
@@ -283,33 +283,26 @@ function describeMap() {
     labels[group.label].name + ", group " + scanGroupName(group) + ".";
 }
 
-function rankRow(mode, { index, distance }) {
+function rankRow({ index, distance }) {
   const group = reference.groups[index];
-  const rank = comparison.ranks[mode].get(index);
-  const row = document.createElement("li");
+  const featuresRank = comparison.ranks.features.get(index);
+  const mapRank = comparison.ranks.map.get(index);
+  const row = document.createElement("tr");
+  const heading = document.createElement("th");
+  heading.scope = "row";
   const button = document.createElement("button");
   button.type = "button";
   button.className = "rank-group";
   button.dataset.groupIndex = index;
-  button.dataset.rank = rank;
   button.setAttribute("aria-pressed", "false");
 
-  const number = document.createElement("strong");
-  number.className = "rank-number";
-  number.textContent = rank;
-  const info = document.createElement("span");
-  info.className = "rank-group-info";
   const groupName = document.createElement("strong");
+  groupName.className = "rank-group-id";
   groupName.textContent = "Group " + scanGroupName(group);
   const groupLabel = document.createElement("span");
+  groupLabel.className = "rank-group-label";
   groupLabel.append(swatch(group.label), labels[group.label].name);
-  info.append(groupName, groupLabel);
-  const score = document.createElement("span");
-  score.className = "rank-distance";
-  score.textContent = distance.toFixed(3);
-  button.setAttribute("aria-label", groupName.textContent + ", " + labels[group.label].name +
-    ", rank " + rank + ", distance " + score.textContent);
-  button.append(number, info, score);
+  button.append(groupName, groupLabel);
   button.addEventListener("click", () => pinGroup(index));
   button.addEventListener("pointerenter", (event) => {
     if (event.pointerType === "mouse") {
@@ -323,59 +316,29 @@ function rankRow(mode, { index, distance }) {
       inspectGroup();
     }
   });
-  row.append(button);
+  heading.append(button);
+  row.append(heading);
+  for (const [rank, score] of [[featuresRank, distance], [mapRank, comparison.map[mapRank - 1].distance]]) {
+    const cell = row.insertCell();
+    cell.className = "rank-value";
+    if (rank === 1) cell.dataset.best = "true";
+    const number = document.createElement("strong");
+    number.className = "rank-number";
+    number.textContent = rank;
+    const value = document.createElement("small");
+    value.className = "rank-distance";
+    value.textContent = "Distance " + score.toFixed(3);
+    cell.append(number, " ", value);
+  }
   return row;
-}
-
-function drawRankLinks() {
-  const context = rankCanvas.getContext("2d");
-  const bounds = rankCanvas.getBoundingClientRect();
-  const { width, height } = bounds;
-  if (!context || !width || !height) return;
-  const ratio = Math.min(devicePixelRatio || 1, 2);
-  const bitmapWidth = Math.round(width * ratio);
-  const bitmapHeight = Math.round(height * ratio);
-  if (rankCanvas.width !== bitmapWidth || rankCanvas.height !== bitmapHeight) {
-    rankCanvas.width = bitmapWidth;
-    rankCanvas.height = bitmapHeight;
-  }
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
-  context.clearRect(0, 0, width, height);
-  if (!comparison) return;
-
-  const center = (button) => {
-    const rect = button.getBoundingClientRect();
-    return rect.top + rect.height * .5 - bounds.top;
-  };
-  const rightRows = new Map(Array.from(rankLists.map.querySelectorAll("button"), (row) => [row.dataset.groupIndex, row]));
-  const selected = hoveredGroup ?? pinnedGroup;
-  const links = Array.from(rankLists.features.querySelectorAll("button"), (left) => {
-    const right = rightRows.get(left.dataset.groupIndex);
-    const active = selected === null
-      ? left.dataset.rank === "1" || right.dataset.rank === "1"
-      : Number(left.dataset.groupIndex) === selected;
-    return { from: center(left), to: center(right), active };
-  });
-  links.sort((a, b) => Number(a.active) - Number(b.active));
-  for (const { from, to, active } of links) {
-    context.lineWidth = active ? 2 : 1;
-    context.strokeStyle = active ? "#a14025" : "#648586";
-    context.beginPath();
-    context.moveTo(0, from);
-    context.bezierCurveTo(width * .4, from, width * .6, to, width, to);
-    context.stroke();
-  }
 }
 
 function renderRankings() {
   resetInspection();
-  const modes = ["features", "map"];
-  const candidates = new Set(modes.flatMap((mode) => comparison[mode].slice(0, 3).map(({ index }) => index)));
-  for (const mode of modes) {
-    const matches = comparison[mode].filter(({ index }) => candidates.has(index));
-    rankLists[mode].replaceChildren(...matches.map((entry) => rankRow(mode, entry)));
-  }
-  rankButtons = Array.from(element("rank-lists").querySelectorAll("button"));
+  const candidates = new Set([...comparison.features.slice(0, 3), ...comparison.map.slice(0, 3)].map(({ index }) => index));
+  const matches = comparison.features.filter(({ index }) => candidates.has(index));
+  rankRows.replaceChildren(...matches.map(rankRow));
+  rankButtons = Array.from(rankRows.querySelectorAll("button"));
   describeRanks();
   describeMap();
   inspectGroup();
@@ -388,8 +351,7 @@ function resetComparison(title, note) {
   element("comparison-title").textContent = title;
   element("comparison-note").textContent = note;
   element("rank-detail").textContent = note;
-  rankLists.features.replaceChildren();
-  rankLists.map.replaceChildren();
+  rankRows.replaceChildren();
   rankButtons = [];
   element("map-caption").textContent = "The two axes use the same scale.";
   element("map-description").textContent = "A scatter plot of reference scan groups in the first two principal components, colored by dataset label.";
@@ -573,10 +535,8 @@ upload.addEventListener("change", () => {
 });
 if (typeof ResizeObserver === "function") {
   new ResizeObserver(drawMap).observe(canvas);
-  new ResizeObserver(drawRankLinks).observe(rankCanvas);
 } else {
   window.addEventListener("resize", drawMap);
-  window.addEventListener("resize", drawRankLinks);
 }
 canvas.addEventListener("pointermove", (event) => {
   if (event.pointerType !== "mouse" || hoverFrame) return;

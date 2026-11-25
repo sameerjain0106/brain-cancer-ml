@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f3f8f6">
+  <meta name="theme-color" content="#fff4d9">
   <meta name="description" content="Explore the representations and results behind Sameer Jain’s brain tumor MRI research project.">
   <title>Brain Tumor MRI Research | Sameer Jain</title>
   <link rel="icon" type="image/png" href="./favicon.png">
@@ -14,58 +14,63 @@
 <body>
   <a class="skip-link" href="#explorer">Skip to MRI comparison</a>
   <main>
-    <section class="study folio-wrap" id="explorer" aria-labelledby="page-title">
-      <div class="scan-desk">
+    <section class="study" id="explorer" aria-labelledby="page-title">
+      <div class="scan-stage">
         <header class="project-name">
           <h1 id="page-title">Brain tumor MRI research</h1>
           <p>Sameer Jain</p>
         </header>
         <div class="scan-input">
           <figure class="specimen" aria-labelledby="image-origin">
-            <div class="scan-frame">
-              <img id="query-image" src="./research/example-glioma.png" alt="Published MRI crop labeled Glioma">
-            </div>
+            <button class="upload-button" id="pick-image" type="button" aria-labelledby="upload-label" aria-describedby="upload-hint" disabled>
+              <span class="scan-frame">
+                <img id="query-image" src="./research/example-glioma.png" alt="Published MRI crop labeled Glioma">
+              </span>
+              <span class="upload-action"><span class="upload-arrow" aria-hidden="true">↑</span> <span id="upload-label">Upload an MRI image</span></span>
+            </button>
             <figcaption>
               <strong id="image-origin">Glioma example</strong>
               <span id="image-caption">Published MRI crop</span>
             </figcaption>
           </figure>
-          <button class="upload-button" id="pick-image" type="button" aria-describedby="upload-hint" disabled><span aria-hidden="true">↑</span> Upload an MRI image</button>
           <input id="upload" type="file" accept="image/png,image/jpeg" hidden>
           <p class="input-hint" id="upload-hint">JPG or PNG. The image stays on your device.</p>
+          <p class="status" id="status" role="status" aria-live="polite">Loading the reference set…</p>
         </div>
-        <p id="samples-label">Example scans</p>
-        <div id="samples" class="sample-list" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
-        <p class="status" id="status" role="status" aria-live="polite">Loading the reference set…</p>
+        <div class="examples">
+          <p id="samples-label">Example scans</p>
+          <div id="samples" class="sample-list" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
+        </div>
       </div>
 
       <section class="rank-panel" aria-labelledby="ranking-title">
-        <header class="rank-header">
-          <h2 id="ranking-title">Nearest scan groups</h2>
-          <p id="rank-detail" role="status">Ranks appear here when an image is ready.</p>
-        </header>
-        <div class="rank-chart" aria-describedby="rank-caption">
-          <h3 id="feature-rank-heading">All 2,048 features <span>Cosine distance</span></h3>
-          <h3 id="map-rank-heading">2D map <span>Euclidean distance</span></h3>
-          <div class="rank-lists" id="rank-lists">
-            <ol id="feature-ranks" aria-labelledby="feature-rank-heading"></ol>
-            <div class="rank-connections" aria-hidden="true"><canvas id="rank-links"></canvas></div>
-            <ol id="map-ranks" aria-labelledby="map-rank-heading"></ol>
+        <div>
+          <header class="rank-header">
+            <h2 id="ranking-title">Nearest scan groups</h2>
+            <p id="rank-detail" role="status">Ranks appear here when an image is ready.</p>
+          </header>
+          <div class="reference-reading" aria-labelledby="comparison-title">
+            <p class="reading-label">Closest label across all features</p>
+            <h3 id="comparison-title">–</h3>
+            <p id="comparison-note">Select a crop to make a comparison.</p>
+            <p class="proximity" id="reference-proximity" hidden></p>
           </div>
         </div>
-        <p id="rank-caption">Groups shown rank in the top three by at least one measure. Select a group to mark it <a href="#atlas">on the map</a>.</p>
-        <nav class="study-links" aria-label="Research sections">
-          <a href="#results">Study results</a>
-          <a href="#method">Methods</a>
-        </nav>
+        <div>
+          <table class="rank-table" aria-describedby="rank-caption">
+            <thead>
+              <tr><th scope="col">Scan group</th><th scope="col">All features rank <small>Cosine distance</small></th><th scope="col">2D map rank <small>Euclidean distance</small></th></tr>
+            </thead>
+            <tbody id="rank-rows"></tbody>
+          </table>
+          <p id="rank-caption">The table shows groups in the top three by either measure. Select a group to mark it <a href="#atlas">on the map</a>.</p>
+          <nav class="study-links" aria-label="Research sections">
+            <a href="#clustering">K-means clustering</a>
+            <a href="#results">Study results</a>
+            <a href="#method">Methods</a>
+          </nav>
+        </div>
       </section>
-
-      <div class="reference-reading" aria-labelledby="comparison-title">
-        <p class="reading-label">Closest reference label</p>
-        <h2 id="comparison-title">–</h2>
-        <p id="comparison-note">Select a crop to make a comparison.</p>
-        <p class="proximity" id="reference-proximity" hidden></p>
-      </div>
     </section>
 
     <section id="atlas" class="projection" aria-labelledby="map-title">
@@ -133,7 +138,7 @@
               <figcaption>All 603 groups aligned with their source labels in this fit.</figcaption>
             </figure>
             <div class="record-story">
-              <h3 id="record-clustering-title">ResNet50 clustering</h3>
+              <h3 id="record-clustering-title">K-means clustering</h3>
               <p>The corrected analysis kept source labels separate from cluster assignments and reached an <strong>Adjusted Rand Index of 1.00</strong>. Average-pooled ImageNet features map each 512 × 512 crop to 2,048 numbers. The experiment averaged those features by filename-derived scan ID before fitting three K-means clusters.</p>
               <p class="record-caveat">The groups are filename-derived. The observed separation comes from this collection and has not been evaluated on data from another scanner or hospital.</p>
               <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/clustering_analysis.ipynb">Open clustering notebook <span aria-hidden="true">↗</span></a>

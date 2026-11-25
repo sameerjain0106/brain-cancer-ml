@@ -1,6 +1,6 @@
 # Brain tumor MRI research site
 
-The project explorer compares JPG and PNG research crops with the ResNet50 references published by the original project. The nearest-group chart shows the top three groups from each metric and their actual ranks in both measures. Select a group to mark it on the PCA map. The browser processes a selected image locally. The site has no upload endpoint, storage service, or analytics. Interactive results describe proximity to groups in the source dataset. Use de-identified research examples.
+The project explorer compares JPG and PNG research crops with the ResNet50 references published by the original project. The nearest-group table shows the top three groups from each metric and their actual ranks in both measures. Select a group to mark it on the PCA map. The browser processes a selected image locally. The site has no upload endpoint, storage service, or analytics. Interactive results describe proximity to groups in the source dataset. Use de-identified research examples.
 
 ## Run locally
 
