@@ -15,7 +15,7 @@ export function unitVector(values, dimension) {
   return Float32Array.from(values, (value) => value * scale);
 }
 
-export function closestGroups(query, vectors, count, excludedIndex = -1) {
+export function rankGroups(query, vectors, count, excludedIndex = -1) {
   if (vectors.length !== query.length * count) throw new Error("The reference index is incomplete.");
   const rows = [];
   for (let index = 0; index < count; index += 1) {
@@ -29,7 +29,7 @@ export function closestGroups(query, vectors, count, excludedIndex = -1) {
     rows.push({ index, distance });
   }
   rows.sort((first, second) => first.distance - second.distance || first.index - second.index);
-  return rows.slice(0, 3);
+  return rows;
 }
 
 export function project(query, projection) {

@@ -1,4 +1,4 @@
-import { closestGroups, labels, prepareImage, project, unitVector } from "./analysis.js";
+import { labels, prepareImage, project, rankGroups, unitVector } from "./analysis.js";
 
 const element = (id) => document.getElementById(id);
 const samples = element("samples");
@@ -7,7 +7,8 @@ const image = element("query-image");
 const pick = element("pick-image");
 const upload = element("upload");
 const canvas = element("feature-map");
-const specimen = canvas.parentElement.querySelector(".specimen");
+const rankLists = { features: element("feature-ranks"), map: element("map-ranks") };
+const rankCanvas = element("rank-links");
 const distanceButtons = Array.from(document.querySelectorAll("[data-distance]"));
 let distanceMode = "features";
 let reference;
@@ -22,7 +23,7 @@ let pinnedGroup = null;
 let hoveredGroup = null;
 let chartPositions = [];
 let hoverFrame = 0;
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+let rankButtons = [];
 
 function say(message, error = false, visible = true) {
   status.classList.toggle("sr-only", !visible);
@@ -52,7 +53,6 @@ function drawMap() {
   const context = canvas.getContext("2d");
   if (!context) return;
   const bounds = canvas.getBoundingClientRect();
-  const print = specimen.getBoundingClientRect();
   const { width, height } = bounds;
   if (width <= 0 || height <= 0) return;
   const pixelRatio = Math.min(devicePixelRatio || 1, 2);
@@ -135,17 +135,7 @@ function drawMap() {
   }
   if (!comparison) return;
   const [qx, qy] = position(queryX, queryY);
-  if (print.top < bounds.bottom && print.bottom > bounds.top) {
-    const anchorX = print.right - bounds.left;
-    const anchorY = print.top + 11 - bounds.top;
-    context.strokeStyle = "#787c60";
-    context.beginPath();
-    context.moveTo(anchorX, anchorY);
-    context.lineTo(anchorX + 13, anchorY);
-    context.lineTo(qx, qy);
-    context.stroke();
-  }
-  for (const match of comparison.matches) {
+  for (const match of comparison[distanceMode].slice(0, 3)) {
     const group = groups[match.index];
     const [gx, gy] = position(group.x, group.y);
     context.setLineDash([3, 4]);
@@ -171,7 +161,7 @@ function drawMap() {
   const outside = queryX < minX || queryX > maxX || queryY < minY || queryY > maxY;
   element("map-caption").textContent = outside
     ? "The crop projects beyond the chart. Its marker sits at the nearest edge."
-    : "The chart uses equal scales for the first two principal components.";
+    : "The two axes use the same scale.";
 }
 
 function showImage(url, alt, origin, caption, local = false) {
@@ -180,7 +170,6 @@ function showImage(url, alt, origin, caption, local = false) {
   image.src = url;
   image.alt = alt;
   image.hidden = false;
-  element("scan-empty").hidden = true;
   element("image-origin").textContent = origin;
   element("image-caption").textContent = caption;
 }
@@ -197,9 +186,13 @@ function inspectGroup() {
   const group = index === null ? null : reference?.groups[index];
   const note = element("map-inspection");
   note.textContent = group
-    ? labels[group.label].name + " · group " + (String(group.id).match(/\d+$/)?.[0] ?? group.id) + " · " + group.sourceCount + " crops"
+    ? labels[group.label].name + " group " + scanGroupName(group) + " (" + group.sourceCount + " crops)"
     : "Select a point or a match.";
   note.dataset.inspecting = String(Boolean(group));
+  for (const button of rankButtons) {
+    button.dataset.linked = String(Number(button.dataset.groupIndex) === index);
+  }
+  drawRankLinks();
   drawMap();
 }
 
@@ -220,9 +213,10 @@ function frameAt(event) {
 
 function pinGroup(index) {
   pinnedGroup = pinnedGroup === index ? null : index;
-  for (const match of element("matches").querySelectorAll("button")) {
+  for (const match of rankButtons) {
     match.setAttribute("aria-pressed", String(Number(match.dataset.groupIndex) === pinnedGroup));
   }
+  describeRanks();
   inspectGroup();
 }
 
@@ -237,16 +231,33 @@ function scanGroupName(group) {
   return String(group.id).match(/\d+$/)?.[0] ?? group.id;
 }
 
+function ordinal(rank) {
+  const suffix = rank % 100 >= 11 && rank % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][rank % 10] ?? "th";
+  return rank + suffix;
+}
+
+function describeRanks() {
+  if (!comparison) return;
+  const index = pinnedGroup ?? comparison.map[0].index;
+  const group = reference.groups[index];
+  const prefix = labels[group.label].name + " group " + scanGroupName(group);
+  const featuresRank = comparison.ranks.features.get(index);
+  const mapRank = comparison.ranks.map.get(index);
+  element("rank-detail").textContent = featuresRank === undefined
+    ? prefix + " is the source group for this example and is excluded from both rankings."
+    : prefix + " ranks " + ordinal(mapRank) + " on the map and " + ordinal(featuresRank) + " across all features.";
+}
+
 function renderComparison(values, excludedIndex = -1) {
   const query = unitVector(values, reference.dimension);
-  const features = closestGroups(query, vectors, reference.groups.length, excludedIndex);
+  const features = rankGroups(query, vectors, reference.groups.length, excludedIndex);
   const coordinates = project(query, reference.projection);
   const map = reference.groups
     .map((group, index) => ({ index, distance: Math.hypot(coordinates[0] - group.x, coordinates[1] - group.y) }))
     .filter(({ index }) => index !== excludedIndex)
-    .sort((a, b) => a.distance - b.distance || a.index - b.index)
-    .slice(0, 3);
-  comparison = { features, map, coordinates, matches: features };
+    .sort((a, b) => a.distance - b.distance || a.index - b.index);
+  const rankIndex = (ranking) => new Map(ranking.map(({ index }, position) => [index, position + 1]));
+  comparison = { features, map, coordinates, ranks: { features: rankIndex(features), map: rankIndex(map) } };
   const best = reference.groups[features[0].index];
   const nearest = labels[best.label].name;
   const cutoff = reference.validation.nearestDistance.p95;
@@ -261,48 +272,112 @@ function renderComparison(values, excludedIndex = -1) {
   element("comparison-note").textContent = excludedIndex !== -1
     ? "Dataset label of the closest group. The sample’s own group is excluded."
     : "Dataset label of the closest group. A close match only describes resemblance within this reference set.";
-  const rankChange = element("rank-change");
-  const chartNearest = reference.groups[map[0].index];
-  rankChange.textContent = features[0].index === map[0].index
-    ? "Both distances rank the same group first."
-    : "Group " + scanGroupName(best) + " comes first across all features. On the map, group " + scanGroupName(chartNearest) + " comes first.";
-  rankChange.hidden = false;
   renderRankings();
 }
 
-function renderRankings() {
-  element("distance-unit").textContent = distanceMode === "map" ? "Distance in 2D" : "Cosine distance";
+function describeMap() {
   if (!comparison) return;
-  resetInspection();
-  const matches = comparison[distanceMode];
-  comparison.matches = matches;
-  const group = reference.groups[matches[0].index];
+  const group = reference.groups[comparison[distanceMode][0].index];
   element("map-description").textContent =
     "A PCA scatter plot of 603 scan groups. The first group in the selected ranking is " +
     labels[group.label].name + ", group " + scanGroupName(group) + ".";
-  const list = element("matches");
-  list.replaceChildren(...matches.map(({ index, distance }) => {
-    const group = reference.groups[index];
-    const row = document.createElement("li");
-    row.className = "match";
-    const label = document.createElement("strong");
-    label.textContent = labels[group.label].name;
-    const groupInfo = document.createElement("span");
-    groupInfo.className = "group-meta";
-    const id = String(group.id).match(/\d+$/)?.[0];
-    groupInfo.textContent = (id ? "Group " + id + " · " : "") + group.sourceCount + " crops";
-    const value = document.createElement("span");
-    value.className = "match-value";
-    value.textContent = distance.toFixed(3);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.setAttribute("aria-pressed", "false");
-    button.append(swatch(group.label), label, groupInfo, value);
-    button.dataset.groupIndex = String(index);
-    button.addEventListener("click", () => pinGroup(index));
-    row.append(button);
-    return row;
-  }));
+}
+
+function rankRow(mode, { index, distance }) {
+  const group = reference.groups[index];
+  const rank = comparison.ranks[mode].get(index);
+  const row = document.createElement("li");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "rank-group";
+  button.dataset.groupIndex = index;
+  button.dataset.rank = rank;
+  button.setAttribute("aria-pressed", "false");
+
+  const number = document.createElement("strong");
+  number.className = "rank-number";
+  number.textContent = rank;
+  const info = document.createElement("span");
+  info.className = "rank-group-info";
+  const groupName = document.createElement("strong");
+  groupName.textContent = "Group " + scanGroupName(group);
+  const groupLabel = document.createElement("span");
+  groupLabel.append(swatch(group.label), labels[group.label].name);
+  info.append(groupName, groupLabel);
+  const score = document.createElement("span");
+  score.className = "rank-distance";
+  score.textContent = distance.toFixed(3);
+  button.setAttribute("aria-label", groupName.textContent + ", " + labels[group.label].name +
+    ", rank " + rank + ", distance " + score.textContent);
+  button.append(number, info, score);
+  button.addEventListener("click", () => pinGroup(index));
+  button.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse") {
+      hoveredGroup = index;
+      inspectGroup();
+    }
+  });
+  button.addEventListener("pointerleave", () => {
+    if (hoveredGroup === index) {
+      hoveredGroup = null;
+      inspectGroup();
+    }
+  });
+  row.append(button);
+  return row;
+}
+
+function drawRankLinks() {
+  const context = rankCanvas.getContext("2d");
+  const bounds = rankCanvas.getBoundingClientRect();
+  const { width, height } = bounds;
+  if (!context || !width || !height) return;
+  const ratio = Math.min(devicePixelRatio || 1, 2);
+  const bitmapWidth = Math.round(width * ratio);
+  const bitmapHeight = Math.round(height * ratio);
+  if (rankCanvas.width !== bitmapWidth || rankCanvas.height !== bitmapHeight) {
+    rankCanvas.width = bitmapWidth;
+    rankCanvas.height = bitmapHeight;
+  }
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.clearRect(0, 0, width, height);
+  if (!comparison) return;
+
+  const center = (button) => {
+    const rect = button.getBoundingClientRect();
+    return rect.top + rect.height * .5 - bounds.top;
+  };
+  const rightRows = new Map(Array.from(rankLists.map.querySelectorAll("button"), (row) => [row.dataset.groupIndex, row]));
+  const selected = hoveredGroup ?? pinnedGroup;
+  const links = Array.from(rankLists.features.querySelectorAll("button"), (left) => {
+    const right = rightRows.get(left.dataset.groupIndex);
+    const active = selected === null
+      ? left.dataset.rank === "1" || right.dataset.rank === "1"
+      : Number(left.dataset.groupIndex) === selected;
+    return { from: center(left), to: center(right), active };
+  });
+  links.sort((a, b) => Number(a.active) - Number(b.active));
+  for (const { from, to, active } of links) {
+    context.lineWidth = active ? 2 : 1;
+    context.strokeStyle = active ? "#a14025" : "#648586";
+    context.beginPath();
+    context.moveTo(0, from);
+    context.bezierCurveTo(width * .4, from, width * .6, to, width, to);
+    context.stroke();
+  }
+}
+
+function renderRankings() {
+  resetInspection();
+  const modes = ["features", "map"];
+  const candidates = new Set(modes.flatMap((mode) => comparison[mode].slice(0, 3).map(({ index }) => index)));
+  for (const mode of modes) {
+    const matches = comparison[mode].filter(({ index }) => candidates.has(index));
+    rankLists[mode].replaceChildren(...matches.map((entry) => rankRow(mode, entry)));
+  }
+  rankButtons = Array.from(element("rank-lists").querySelectorAll("button"));
+  describeRanks();
+  describeMap();
   inspectGroup();
 }
 
@@ -310,16 +385,18 @@ function resetComparison(title, note) {
   comparison = null;
   resetInspection();
   element("reference-proximity").hidden = true;
-  element("rank-change").hidden = true;
   element("comparison-title").textContent = title;
   element("comparison-note").textContent = note;
-  element("matches").replaceChildren();
-  element("map-caption").textContent = "The map compresses 2,048 features into two dimensions. Neighbor ranking uses the full feature vectors.";
+  element("rank-detail").textContent = note;
+  rankLists.features.replaceChildren();
+  rankLists.map.replaceChildren();
+  rankButtons = [];
+  element("map-caption").textContent = "The two axes use the same scale.";
   element("map-description").textContent = "A scatter plot of reference scan groups in the first two principal components, colored by dataset label.";
   inspectGroup();
 }
 
-function useSample(sample, animate = false) {
+function useSample(sample) {
   latestRun += 1;
   if (pendingUpload) {
     worker?.terminate();
@@ -329,12 +406,7 @@ function useSample(sample, animate = false) {
   pick.disabled = false;
   markSelection(sample.id);
   showImage(localAsset(sample.imagePath).href, "Published MRI project crop labeled " + labels[sample.label].name,
-    "Published example", "This crop uses its saved ResNet50 features.");
-  if (animate && !reducedMotion.matches && typeof image.animate === "function") {
-    for (const animation of image.getAnimations()) animation.cancel();
-    image.animate([{ opacity: 0.52, transform: "translateY(4px)" }, { opacity: 1, transform: "translateY(0)" }],
-      { duration: 170, easing: "cubic-bezier(.23,1,.32,1)" });
-  }
+    labels[sample.label].name + " example", "Published MRI crop");
   renderComparison(sample.embedding, sample.groupIndex);
   say("Showing the published " + labels[sample.label].name.toLowerCase() + " example.", false, false);
 }
@@ -390,7 +462,7 @@ async function useUpload(file) {
     }
     markSelection(null);
     showImage(url, "Locally selected research image", "Selected image",
-      "The image stays in this tab. Use a de-identified MRI crop similar to the project’s source images.", true);
+      "Local file", true);
     resetComparison("In progress", "Comparing the selected crop with saved scan-group features.");
     const activeWorker = ensureWorker();
     pendingUpload = id;
@@ -450,8 +522,11 @@ async function start() {
       button.className = "sample-button";
       button.dataset.sample = sample.id;
       button.setAttribute("aria-pressed", "false");
-      button.append(swatch(sample.label), labels[sample.label].name);
-      button.addEventListener("click", (event) => useSample(sample, event.detail > 0));
+      const thumbnail = document.createElement("img");
+      thumbnail.src = localAsset(sample.imagePath).href;
+      thumbnail.alt = "";
+      button.append(thumbnail, labels[sample.label].name);
+      button.addEventListener("click", () => useSample(sample));
       samples.append(button);
     }
     samples.setAttribute("aria-busy", "false");
@@ -486,7 +561,8 @@ for (const button of distanceButtons) {
     for (const control of distanceButtons) {
       control.setAttribute("aria-pressed", String(control === button));
     }
-    renderRankings();
+    describeMap();
+    drawMap();
   });
 }
 pick.addEventListener("click", () => upload.click());
@@ -497,8 +573,10 @@ upload.addEventListener("change", () => {
 });
 if (typeof ResizeObserver === "function") {
   new ResizeObserver(drawMap).observe(canvas);
+  new ResizeObserver(drawRankLinks).observe(rankCanvas);
 } else {
   window.addEventListener("resize", drawMap);
+  window.addEventListener("resize", drawRankLinks);
 }
 canvas.addEventListener("pointermove", (event) => {
   if (event.pointerType !== "mouse" || hoverFrame) return;

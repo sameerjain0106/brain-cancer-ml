@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f4f1e8">
+  <meta name="theme-color" content="#f3f8f6">
   <meta name="description" content="Explore the representations and results behind Sameer Jain’s brain tumor MRI research project.">
   <title>Brain Tumor MRI Research | Sameer Jain</title>
   <link rel="icon" type="image/png" href="./favicon.png">
@@ -13,43 +13,69 @@
 </head>
 <body>
   <a class="skip-link" href="#explorer">Skip to MRI comparison</a>
-  <header class="folio-header">
-    <div class="folio-wrap">
-      <span class="folio-name">Brain tumor MRI</span>
-      <nav aria-label="Project links">
-        <a href="#results">Findings</a>
-        <a href="#method">Methods</a>
-        <a href="https://github.com/sameerjain0106/brain-cancer-ml">Source</a>
-      </nav>
-    </div>
-  </header>
   <main>
     <section class="study folio-wrap" id="explorer" aria-labelledby="page-title">
-      <aside class="opening-note">
-        <h1 id="page-title">One scan,<br> two distances.</h1>
-        <p class="question-copy">See how an MRI crop’s nearest groups change when you use the map or all 2,048 features.</p>
-
-        <div class="source-select">
+      <div class="scan-desk">
+        <header class="project-name">
+          <h1 id="page-title">Brain tumor MRI research</h1>
+          <p>Sameer Jain</p>
+        </header>
+        <div class="scan-input">
+          <figure class="specimen" aria-labelledby="image-origin">
+            <div class="scan-frame">
+              <img id="query-image" src="./research/example-glioma.png" alt="Published MRI crop labeled Glioma">
+            </div>
+            <figcaption>
+              <strong id="image-origin">Glioma example</strong>
+              <span id="image-caption">Published MRI crop</span>
+            </figcaption>
+          </figure>
           <button class="upload-button" id="pick-image" type="button" aria-describedby="upload-hint" disabled><span aria-hidden="true">↑</span> Upload an MRI image</button>
           <input id="upload" type="file" accept="image/png,image/jpeg" hidden>
-          <p class="input-hint" id="upload-hint">JPG or PNG · stays on your device</p>
-          <p id="samples-label">Or try an example</p>
-          <div id="samples" class="sample-list" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
-          <p class="status" id="status" role="status" aria-live="polite">Loading the reference set…</p>
+          <p class="input-hint" id="upload-hint">JPG or PNG. The image stays on your device.</p>
         </div>
+        <p id="samples-label">Example scans</p>
+        <div id="samples" class="sample-list" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
+        <p class="status" id="status" role="status" aria-live="polite">Loading the reference set…</p>
+      </div>
 
-        <div class="reference-reading" aria-labelledby="comparison-title">
-          <p class="reading-label">Closest label using all features</p>
-          <h2 id="comparison-title">–</h2>
-          <p id="comparison-note">Select a crop to make a comparison.</p>
-          <p class="proximity" id="reference-proximity" hidden></p>
+      <section class="rank-panel" aria-labelledby="ranking-title">
+        <header class="rank-header">
+          <h2 id="ranking-title">Nearest scan groups</h2>
+          <p id="rank-detail" role="status">Ranks appear here when an image is ready.</p>
+        </header>
+        <div class="rank-chart" aria-describedby="rank-caption">
+          <h3 id="feature-rank-heading">All 2,048 features <span>Cosine distance</span></h3>
+          <h3 id="map-rank-heading">2D map <span>Euclidean distance</span></h3>
+          <div class="rank-lists" id="rank-lists">
+            <ol id="feature-ranks" aria-labelledby="feature-rank-heading"></ol>
+            <div class="rank-connections" aria-hidden="true"><canvas id="rank-links"></canvas></div>
+            <ol id="map-ranks" aria-labelledby="map-rank-heading"></ol>
+          </div>
         </div>
-      </aside>
+        <p id="rank-caption">Groups shown rank in the top three by at least one measure. Select a group to mark it <a href="#atlas">on the map</a>.</p>
+        <nav class="study-links" aria-label="Research sections">
+          <a href="#results">Study results</a>
+          <a href="#method">Methods</a>
+        </nav>
+      </section>
 
-      <div id="atlas" class="working-figure" aria-labelledby="map-title">
+      <div class="reference-reading" aria-labelledby="comparison-title">
+        <p class="reading-label">Closest reference label</p>
+        <h2 id="comparison-title">–</h2>
+        <p id="comparison-note">Select a crop to make a comparison.</p>
+        <p class="proximity" id="reference-proximity" hidden></p>
+      </div>
+    </section>
+
+    <section id="atlas" class="projection" aria-labelledby="map-title">
+      <div class="working-figure folio-wrap">
         <div class="figure-heading">
-          <h2 id="map-title">603 scan groups</h2>
-          <div class="distance-switch" role="group" aria-label="Rank nearest groups by">
+          <div>
+            <h2 id="map-title">PCA map</h2>
+            <p>603 scan groups projected onto the first two principal components.</p>
+          </div>
+          <div class="distance-switch" role="group" aria-label="Show nearest groups on the map by">
             <button type="button" data-distance="features" aria-pressed="true">All features</button>
             <button type="button" data-distance="map" aria-pressed="false">Map distance</button>
           </div>
@@ -59,16 +85,6 @@
           <canvas id="feature-map" role="img" aria-describedby="map-description"></canvas>
           <span class="axis axis-x" aria-hidden="true">PC 1</span>
           <span class="axis axis-y" aria-hidden="true">PC 2</span>
-          <figure class="specimen" aria-labelledby="image-origin">
-            <div class="scan-frame">
-              <img id="query-image" src="./research/example-glioma.png" alt="Published MRI crop labeled Glioma">
-              <div id="scan-empty" hidden>Select an example</div>
-            </div>
-            <figcaption>
-              <strong id="image-origin">Published example</strong>
-              <span id="image-caption">Glioma crop</span>
-            </figcaption>
-          </figure>
         </div>
         <p id="map-description" class="sr-only">A PCA scatter plot of reference scan groups, colored by dataset label.</p>
         <div class="plot-notes">
@@ -76,20 +92,15 @@
           <p id="map-inspection" class="map-inspection">Select a point or a match.</p>
         </div>
 
-        <div class="comparison-list">
-          <p id="rank-change" class="rank-change" aria-live="polite" hidden></p>
-          <div class="list-header"><h3>Three nearest groups</h3><span id="distance-unit">Cosine distance</span></div>
-          <ol id="matches"></ol>
-          <p id="map-caption" class="map-caption">The map shows the first two principal components.</p>
-        </div>
+        <p id="map-caption" class="map-caption">The two axes use the same scale.</p>
       </div>
     </section>
 
     <section id="results" class="research-evidence" aria-labelledby="findings-title">
       <div class="record-wrap">
         <header class="record-open">
-          <h2 id="findings-title">What held up?</h2>
-          <p>Three ways to read the same collection of 6,056 MRI images.</p>
+          <h2 id="findings-title">Study results</h2>
+          <p>The project used 6,056 MRI images for three experiments.</p>
         </header>
 
         <article id="anomaly" class="record-anomaly" aria-labelledby="record-anomaly-title">
@@ -145,7 +156,7 @@
         </div>
 
         <article class="record-followup" id="pca-followup" hidden>
-          <h3>Centering changed the result.</h3>
+          <h3>ResNet50 novelty benchmark</h3>
           <p id="followup-description"></p>
           <div class="record-table">
             <table id="followup-table">
@@ -159,8 +170,8 @@
 
     <section id="method" class="processing" aria-labelledby="method-title">
       <div class="record-wrap">
-        <h2 id="method-title">How the explorer works</h2>
-        <p class="processing-lede">Follow the image from pixels to its nearest reference group.</p>
+        <h2 id="method-title">Image processing and comparison</h2>
+        <p class="processing-lede">How the explorer prepares an image and finds nearby groups.</p>
         <ol class="processing-flow">
           <li><h3>Prepare the crop</h3><p>Resize to 512 × 512 using the original nearest-neighbor sampling. Convert RGB to BGR and subtract the ImageNet channel means.</p></li>
           <li><h3>Extract features</h3><p>Run the Keras ImageNet ResNet50 backbone without its classification head. Global average pooling produces one 2,048-dimensional vector.</p></li>
