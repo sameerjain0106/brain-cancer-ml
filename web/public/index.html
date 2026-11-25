@@ -9,7 +9,11 @@
   <link rel="icon" type="image/png" href="./favicon.png">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./evidence.css">
+  <link rel="stylesheet" href="./anomaly-figure.css">
+  <link rel="stylesheet" href="./elbow-figure.css">
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./anomaly-figure.js"></script>
+  <script type="module" src="./elbow-figure.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#explorer">Skip to MRI comparison</a>
@@ -46,60 +50,45 @@
           <div id="samples" class="sample-list" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
         </div>
       </div>
-
-      <section class="rank-panel" aria-labelledby="ranking-title">
-        <div>
-          <header class="rank-header">
-            <h2 id="ranking-title">Nearest scan groups</h2>
-            <p id="rank-detail" role="status">Ranks appear here when an image is ready.</p>
-          </header>
-          <div class="reference-reading">
-            <p id="comparison-note">Select a crop to make a comparison.</p>
-            <p class="proximity" id="reference-proximity" hidden></p>
-          </div>
-        </div>
-        <div>
-          <table class="rank-table" aria-describedby="rank-caption">
-            <thead>
-              <tr><th scope="col">Scan group</th><th scope="col">All features rank <small>Cosine distance</small></th><th scope="col">2D map rank <small>Euclidean distance</small></th></tr>
-            </thead>
-            <tbody id="rank-rows"></tbody>
-          </table>
-          <p id="rank-caption">The table shows groups in the top three by either measure. Select a group to mark it <a href="#atlas">on the map</a>.</p>
-          <nav class="study-links" aria-label="Research sections">
-            <a href="#clustering">K-means clustering</a>
-            <a href="#results">Study results</a>
-            <a href="#method">Methods</a>
-          </nav>
-        </div>
-      </section>
     </section>
 
     <section id="atlas" class="projection" aria-labelledby="map-title">
-      <div class="working-figure folio-wrap">
-        <div class="figure-heading">
-          <div>
-            <h2 id="map-title">PCA map</h2>
-            <p>603 scan groups projected onto the first two principal components.</p>
+      <div class="working-figure record-wrap">
+        <header class="figure-heading">
+          <h2 id="map-title">MRI scan groups</h2>
+          <p>Each point is one scan group, positioned using the first two principal components of its ResNet50 features.</p>
+        </header>
+        <div class="map-layout">
+          <div class="map-controls">
+            <div class="map-filters" role="group" aria-label="Highlight a dataset label">
+              <button type="button" data-map-label="all" aria-pressed="true" disabled>All scan types</button>
+              <button type="button" data-map-label="brain_menin" aria-pressed="false" disabled><span class="map-mark" aria-hidden="true"></span>Meningioma</button>
+              <button type="button" data-map-label="brain_tumor" aria-pressed="false" disabled><span class="map-mark" aria-hidden="true"></span>Tumor</button>
+              <button type="button" data-map-label="brain_glioma" aria-pressed="false" disabled><span class="map-mark" aria-hidden="true"></span>Glioma</button>
+            </div>
+            <p id="map-summary" role="status">Loading the scan groups…</p>
+            <nav class="study-links" aria-label="Research sections">
+              <a href="#clustering">K-means clustering</a>
+              <a href="#results">Study results</a>
+              <a href="#method">Methods</a>
+            </nav>
           </div>
-          <div class="distance-switch" role="group" aria-label="Show nearest groups on the map by">
-            <button type="button" data-distance="features" aria-pressed="true">All features</button>
-            <button type="button" data-distance="map" aria-pressed="false">Map distance</button>
-          </div>
+          <figure class="projection-figure">
+            <div class="map-shell">
+              <canvas id="feature-map" role="img" aria-describedby="map-summary map-caption" aria-label="PCA map of MRI scan groups"></canvas>
+              <span class="axis axis-x" aria-hidden="true">PC 1</span>
+              <span class="axis axis-y" aria-hidden="true">PC 2</span>
+            </div>
+            <figcaption class="map-notes">
+              <span id="query-key" hidden><span class="query-mark" aria-hidden="true"></span> Selected scan</span>
+              <p id="map-caption">The two axes use the same scale.</p>
+            </figcaption>
+          </figure>
         </div>
-
-        <div class="map-shell" id="map-shell">
-          <canvas id="feature-map" role="img" aria-describedby="map-description"></canvas>
-          <span class="axis axis-x" aria-hidden="true">PC 1</span>
-          <span class="axis axis-y" aria-hidden="true">PC 2</span>
+        <div class="map-match-note">
+          <p id="comparison-note" hidden></p>
+          <p class="proximity" id="reference-proximity" hidden></p>
         </div>
-        <p id="map-description" class="sr-only">A PCA scatter plot of reference scan groups, colored by dataset label.</p>
-        <div class="plot-notes">
-          <div class="legend" id="legend" aria-label="Dataset label colors"></div>
-          <p id="map-inspection" class="map-inspection">Select a point or a match.</p>
-        </div>
-
-        <p id="map-caption" class="map-caption">The two axes use the same scale.</p>
       </div>
     </section>
 
@@ -110,6 +99,29 @@
           <p>The project used 6,056 MRI images for three experiments.</p>
         </header>
 
+        <article id="clustering" class="record-clustering" aria-labelledby="record-clustering-title">
+          <div class="record-story">
+            <h3 id="record-clustering-title">K-means clustering</h3>
+            <p>The corrected analysis kept source labels separate from cluster assignments and reached an <strong>Adjusted Rand Index of 1.00</strong>. Average-pooled ImageNet features map each 512 × 512 crop to 2,048 numbers. The experiment averaged those features by filename-derived scan ID before fitting three K-means clusters.</p>
+            <p class="record-caveat">The groups are filename-derived. The observed separation comes from this collection and has not been evaluated on data from another scanner or hospital.</p>
+            <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/clustering_analysis.ipynb">Open clustering notebook <span aria-hidden="true">↗</span></a>
+          </div>
+          <div>
+            <figure id="elbow-chart" class="elbow-chart" hidden></figure>
+            <figure id="elbow-static" class="record-plate">
+              <img src="./research/elbow_plot.png" alt="Within-cluster sum of squares compared across cluster counts" loading="lazy">
+              <figcaption>The elbow plot used to choose three clusters.</figcaption>
+            </figure>
+            <details class="record-detail">
+              <summary>See how the fitted clusters aligned with the dataset labels</summary>
+              <figure class="record-plate">
+                <img src="./research/cluster_vs_true_label_confusion_matrix.png" alt="Clustering confusion matrix aligned to dataset labels, with 201 groups per class on the diagonal" loading="lazy">
+                <figcaption>All 603 groups aligned with their source labels in this fit.</figcaption>
+              </figure>
+            </details>
+          </div>
+        </article>
+
         <article id="anomaly" class="record-anomaly" aria-labelledby="record-anomaly-title">
           <div class="record-story">
             <h3 id="record-anomaly-title">The anomaly test</h3>
@@ -119,7 +131,8 @@
             <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/anomaly_detection.ipynb">Open anomaly notebook <span aria-hidden="true">↗</span></a>
           </div>
           <div>
-            <figure class="record-plate">
+            <figure id="anomaly-chart" class="anomaly-chart" hidden></figure>
+            <figure id="anomaly-static" class="record-plate">
               <img src="./research/anomaly_confusion_matrix.png" alt="Anomaly confusion matrix. Of 400 held-out glioma crops, 357 were called glioma-like and 43 anomalies. Of 4,052 other crops, 2,204 were called glioma-like and 1,848 anomalies." loading="lazy">
               <figcaption>Confusion matrix after separating training and evaluation crops.</figcaption>
             </figure>
@@ -134,44 +147,23 @@
         </article>
 
         <div class="record-secondary">
-          <article id="clustering" class="record-clustering" aria-labelledby="record-clustering-title">
-            <figure class="record-plate">
-              <img src="./research/cluster_vs_true_label_confusion_matrix.png" alt="Clustering confusion matrix aligned to dataset labels, with 201 groups per class on the diagonal" loading="lazy">
-              <figcaption>All 603 groups aligned with their source labels in this fit.</figcaption>
-            </figure>
-            <div class="record-story">
-              <h3 id="record-clustering-title">K-means clustering</h3>
-              <p>The corrected analysis kept source labels separate from cluster assignments and reached an <strong>Adjusted Rand Index of 1.00</strong>. Average-pooled ImageNet features map each 512 × 512 crop to 2,048 numbers. The experiment averaged those features by filename-derived scan ID before fitting three K-means clusters.</p>
-              <p class="record-caveat">The groups are filename-derived. The observed separation comes from this collection and has not been evaluated on data from another scanner or hospital.</p>
-              <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/clustering_analysis.ipynb">Open clustering notebook <span aria-hidden="true">↗</span></a>
-              <details class="record-detail">
-                <summary>See how the number of clusters was chosen</summary>
-                <figure class="record-plate">
-                  <img src="./research/elbow_plot.png" alt="Within-cluster sum of squares compared across cluster counts" loading="lazy">
-                  <figcaption>The elbow plot used to choose three clusters.</figcaption>
-                </figure>
-              </details>
-            </div>
-          </article>
-
           <article id="supervised" class="record-supervised record-story" aria-labelledby="record-supervised-title">
             <h3 id="record-supervised-title">Supervised classification</h3>
             <p>The 900-tree random forest reached <strong>72.7% accuracy</strong> and <strong>0.729 F1</strong> in the original run. The study reduced flattened grayscale pixels to 1,000 principal components, then compared logistic regression, K-nearest neighbors, and random forest.</p>
             <p class="record-caveat">PCA was fit before the split and settings were explored on the test set. The original loop read 2,004 images per class, leaving 44 images from the “Tumor” folder unused. The preserved score is a historical baseline.</p>
             <a class="record-source" href="https://github.com/sameerjain0106/brain-cancer-ml/blob/main/supervised_classification.ipynb">Open supervised notebook <span aria-hidden="true">↗</span></a>
           </article>
+          <article class="record-followup" id="pca-followup" hidden>
+            <h3>ResNet50 novelty benchmark</h3>
+            <p id="followup-description"></p>
+            <div class="record-table">
+              <table id="followup-table">
+                <thead><tr><th scope="col">Representation</th><th scope="col">AUROC</th><th scope="col">Balanced accuracy</th></tr></thead><tbody></tbody>
+              </table>
+            </div>
+            <p id="followup-note" class="record-caveat"></p>
+          </article>
         </div>
-
-        <article class="record-followup" id="pca-followup" hidden>
-          <h3>ResNet50 novelty benchmark</h3>
-          <p id="followup-description"></p>
-          <div class="record-table">
-            <table id="followup-table">
-              <thead><tr><th scope="col">Representation</th><th scope="col">AUROC</th><th scope="col">Balanced accuracy</th></tr></thead><tbody></tbody>
-            </table>
-          </div>
-          <p id="followup-note" class="record-caveat"></p>
-        </article>
       </div>
     </section>
 

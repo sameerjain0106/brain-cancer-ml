@@ -1,6 +1,6 @@
 
 .record-wrap {
-  width: min(1220px, calc(100% - 70px));
+  width: min(1650px, calc(100% - clamp(36px, 6.2vw, 110px)));
   margin-inline: auto;
 }
 
@@ -67,16 +67,22 @@
   text-decoration-thickness: 2px;
 }
 
-.record-anomaly {
+.record-anomaly,
+.record-clustering {
   display: grid;
-  grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
-  align-items: center;
-  gap: clamp(1.5rem, 5.5vw, 6rem);
-  padding-block: clamp(2.15rem, 6vw, 6rem);
+  grid-template-columns: minmax(0, .79fr) minmax(0, 1.36fr);
+  align-items: start;
+  gap: clamp(1.5rem, 5vw, 5.5rem);
+  padding-block: clamp(2.15rem, 5.2vw, 5.6rem);
 }
 
-.record-anomaly > .record-story {
-  max-width: 49ch;
+.record-anomaly {
+  border-top: 1px solid color-mix(in srgb, var(--ink), transparent 72%);
+}
+
+.record-anomaly > .record-story,
+.record-clustering > .record-story {
+  max-width: 57ch;
 }
 
 .record-anomaly-lede {
@@ -117,57 +123,29 @@
 
 .record-detail .record-plate {
   margin-block: .5rem 1rem;
-  max-width: 31rem;
+  max-width: 48rem;
 }
 
 .record-secondary {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(0, .85fr);
-  gap: clamp(1.5rem, 6vw, 6.5rem);
+  grid-template-columns: minmax(0, .79fr) minmax(0, 1.36fr);
+  gap: clamp(1.5rem, 5vw, 5.5rem);
   align-items: start;
   border-top: 1px solid color-mix(in srgb, var(--ink), transparent 72%);
   padding-block: clamp(2rem, 5vw, 4.75rem);
 }
 
-.record-clustering > .record-plate {
-  max-width: 34rem;
-  margin-bottom: 1.6rem;
-}
-
-.record-clustering > .record-story {
-  max-width: 64ch;
-}
-
 .record-supervised {
-  padding-top: clamp(1.25rem, 4vw, 3.5rem);
-}
-
-.record-supervised h3 {
-  padding-top: 1rem;
-  border-top: 3px solid var(--sea);
+  max-width: 57ch;
 }
 
 .record-followup {
   display: grid;
-  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-  gap: .75rem clamp(1.5rem, 5vw, 5rem);
-  align-items: start;
-  padding-block: clamp(2rem, 5vw, 4.5rem) 0;
-  border-top: 1px solid color-mix(in srgb, var(--ink), transparent 72%);
-}
-
-.record-followup h3 {
-  grid-column: 1 / -1;
-  margin-bottom: .2rem;
+  gap: .8rem;
 }
 
 .record-followup > p {
-  max-width: 60ch;
-}
-
-.record-followup .record-table {
-  grid-column: 2;
-  grid-row: 2 / span 2;
+  max-width: 74ch;
 }
 
 .record-followup .record-table table {
@@ -212,20 +190,17 @@
   padding-block: clamp(3.15rem, 8vw, 7rem);
 }
 
-.processing h2 {
-  max-width: 11ch;
-}
-
 .processing-lede {
-  max-width: 45ch;
   font-size: clamp(1.05rem, 2vw, 1.35rem);
   margin: 1.2rem 0 2.4rem;
 }
 
 .processing-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.25rem, 4vw, 4rem);
   list-style: none;
   counter-reset: step;
-  max-width: 90ch;
   padding: 0;
   margin: 0;
 }
@@ -233,8 +208,9 @@
 .processing-flow li {
   counter-increment: step;
   display: grid;
-  grid-template-columns: 2rem minmax(0, .77fr) minmax(0, 1.23fr);
-  gap: .5rem 1rem;
+  grid-template-columns: 1.8rem minmax(0, 1fr);
+  gap: .5rem .6rem;
+  align-content: start;
   padding-block: 1.05rem;
   border-top: 1px solid color-mix(in srgb, var(--ink), transparent 70%);
 }
@@ -253,12 +229,13 @@
 }
 
 .processing-flow p {
+  grid-column: 2;
   line-height: 1.55;
 }
 
 .processing-validation,
 .processing-note {
-  max-width: 83ch;
+  max-width: 100ch;
   font-size: .93rem;
   line-height: 1.55;
   margin: 1rem 0 0;
@@ -306,8 +283,9 @@
 
 @media (max-width: 760px) {
   .record-anomaly,
+  .record-clustering,
   .record-secondary,
-  .record-followup {
+  .processing-flow {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -315,19 +293,8 @@
     max-width: 66ch;
   }
 
-  .record-anomaly > .record-plate {
-    width: min(100%, 32rem);
-  }
-
-  .record-supervised {
-    max-width: 48ch;
-    padding-top: .15rem;
-  }
-
-  .record-followup .record-table {
-    grid-column: auto;
-    grid-row: auto;
-  }
+  .record-followup { border-top: 1px solid color-mix(in srgb, var(--ink), transparent 72%); padding-top: 1.25rem; }
+  .processing-flow { gap: 0; }
 }
 
 @media (max-width: 520px) {
@@ -337,10 +304,6 @@
 
   .processing-flow li {
     grid-template-columns: 1.6rem minmax(0, 1fr);
-  }
-
-  .processing-flow p {
-    grid-column: 2;
   }
 
   .record-end {

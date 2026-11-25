@@ -11,9 +11,11 @@ const matchTitle = element("comparison-title");
 const matchAccent = element("match-accent");
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const canvas = element("feature-map");
-const rankRows = element("rank-rows");
-const distanceButtons = Array.from(document.querySelectorAll("[data-distance]"));
-let distanceMode = "features";
+const mapButtons = Array.from(document.querySelectorAll("[data-map-label]"));
+let mapLabel = "all";
+let mapBounds;
+let mapGroups;
+let queryCoordinates = null;
 let reference;
 let vectors;
 let worker;
@@ -21,12 +23,6 @@ let pendingUpload = null;
 let selectedSample = null;
 let selectedUrl = null;
 let latestRun = 0;
-let comparison = null;
-let pinnedGroup = null;
-let hoveredGroup = null;
-let chartPositions = [];
-let hoverFrame = 0;
-let rankButtons = [];
 let matchAnimation;
 
 function say(message, error = false, visible = true) {
@@ -58,126 +54,125 @@ async function loadAsset(path, format) {
   return response[format]();
 }
 
-function swatch(label, className = "") {
-  const dot = document.createElement("i");
-  dot.className = "swatch " + className;
-  if (label) dot.style.setProperty("--swatch", labels[label].color);
-  dot.setAttribute("aria-hidden", "true");
-  return dot;
+function selectMapLabel(label) {
+  mapLabel = label;
+  for (const button of mapButtons) {
+    button.setAttribute("aria-pressed", String(button.dataset.mapLabel === label));
+  }
+  const selected = label === "all" ? reference.groups : mapGroups.get(label);
+  const groups = selected.length.toLocaleString();
+  const crops = selected.reduce((total, group) => total + group.sourceCount, 0).toLocaleString();
+  element("map-summary").textContent = label === "all"
+    ? groups + " groups from " + crops + " MRI crops."
+    : groups + " groups from " + crops + " MRI crops labeled " + labels[label].name + ". Other types are faded.";
+  drawMap();
+}
+
+function configureMap() {
+  mapGroups = new Map(Object.keys(labels).map((label) => [
+    label, reference.groups.filter((group) => group.label === label),
+  ]));
+  const bounds = (axis) => {
+    const values = reference.groups.map((group) => group[axis]);
+    return [Math.min(...values), Math.max(...values)];
+  };
+  mapBounds = [bounds("x"), bounds("y")];
+  for (const button of mapButtons) button.disabled = false;
+  selectMapLabel("all");
+}
+
+function extendExtent([low, high], query) {
+  const space = (high - low) * .23;
+  return [Math.min(low, Math.max(low - space, query ?? low)),
+    Math.max(high, Math.min(high + space, query ?? high))];
+}
+
+function drawPoint(context, x, y, radius, label) {
+  context.beginPath();
+  if (label === "brain_glioma") {
+    context.rect(x - radius * .82, y - radius * .82, radius * 1.64, radius * 1.64);
+  } else if (label === "brain_tumor") {
+    context.moveTo(x, y - radius * 1.15);
+    context.lineTo(x + radius, y + radius * .6);
+    context.lineTo(x - radius, y + radius * .6);
+    context.closePath();
+  } else {
+    context.arc(x, y, radius * .86, 0, Math.PI * 2);
+  }
+  context.fill();
 }
 
 function drawMap() {
   const context = canvas.getContext("2d");
-  if (!context) return;
-  const bounds = canvas.getBoundingClientRect();
-  const { width, height } = bounds;
-  if (width <= 0 || height <= 0) return;
-  const pixelRatio = Math.min(devicePixelRatio || 1, 2);
-  const bitmapWidth = Math.round(width * pixelRatio);
-  const bitmapHeight = Math.round(height * pixelRatio);
+  if (!context || !mapBounds) return;
+  const { width, height } = canvas.getBoundingClientRect();
+  if (!width || !height) return;
+  const ratio = Math.min(devicePixelRatio || 1, 2);
+  const bitmapWidth = Math.round(width * ratio);
+  const bitmapHeight = Math.round(height * ratio);
   if (canvas.width !== bitmapWidth || canvas.height !== bitmapHeight) {
     canvas.width = bitmapWidth;
     canvas.height = bitmapHeight;
   }
-  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
-  if (!reference) return;
-  const padding = width > 520 ? 34 : 19;
-  const groups = reference.groups;
-  const xs = groups.map((group) => group.x);
-  const ys = groups.map((group) => group.y);
-  const extent = (values, query) => {
-    const low = Math.min(...values);
-    const high = Math.max(...values);
-    const space = (high - low) * 0.23;
-    return [
-      Math.min(low, Math.max(low - space, query ?? low)),
-      Math.max(high, Math.min(high + space, query ?? high)),
-    ];
-  };
-  const [queryX, queryY] = comparison?.coordinates ?? [];
-  const [minX, maxX] = extent(xs, queryX);
-  const [minY, maxY] = extent(ys, queryY);
+  const padding = width > 550 ? 41 : 23;
+  const [queryX, queryY] = queryCoordinates ?? [];
+  const [minX, maxX] = extendExtent(mapBounds[0], queryX);
+  const [minY, maxY] = extendExtent(mapBounds[1], queryY);
   const scale = Math.min((width - 2 * padding) / (maxX - minX), (height - 2 * padding) / (maxY - minY));
-  const middleX = (minX + maxX) * 0.5;
-  const middleY = (minY + maxY) * 0.5;
-  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
-  const position = (x, y) => [
-    width * .5 + (clamp(x, minX, maxX) - middleX) * scale,
-    height * .5 - (clamp(y, minY, maxY) - middleY) * scale,
-  ];
+  const middleX = (minX + maxX) / 2;
+  const middleY = (minY + maxY) / 2;
+  const position = (x, y) => [width / 2 + (x - middleX) * scale, height / 2 - (y - middleY) * scale];
 
-  context.strokeStyle = "#a1a897";
+  context.lineWidth = 1;
+  context.strokeStyle = "#d8e7e3";
   context.beginPath();
-  context.moveTo(padding, padding);
-  context.lineTo(padding, height - padding);
-  context.lineTo(width - padding, height - padding);
-  for (let step = 1; step < 8; step += 1) {
-    const x = padding + (width - 2 * padding) * step / 8;
-    const y = padding + (height - 2 * padding) * step / 8;
-    context.moveTo(x, height - padding - 3);
-    context.lineTo(x, height - padding + 3);
-    context.moveTo(padding - 3, y);
-    context.lineTo(padding + 3, y);
+  for (const value of [-.2, -.1, 0, .1, .2]) {
+    const [x, y] = position(value, value);
+    if (x > padding && x < width - padding) {
+      context.moveTo(x, padding);
+      context.lineTo(x, height - padding);
+    }
+    if (y > padding && y < height - padding) {
+      context.moveTo(padding, y);
+      context.lineTo(width - padding, y);
+    }
   }
   context.stroke();
-  chartPositions = groups.map((group) => position(group.x, group.y));
-  context.globalAlpha = 0.62;
-  for (let index = 0; index < groups.length; index += 1) {
-    const group = groups[index];
-    const [x, y] = chartPositions[index];
-    context.fillStyle = labels[group.label].color;
-    context.beginPath();
-    context.arc(x, y, 2.5, 0, Math.PI * 2);
-    context.fill();
+
+  const radius = width > 550 ? 3.45 : 2.6;
+  for (const [label, groups] of mapGroups) {
+    context.fillStyle = labels[label].color;
+    context.globalAlpha = mapLabel === "all" ? .66 : mapLabel === label ? .86 : .13;
+    for (const group of groups) {
+      const [x, y] = position(group.x, group.y);
+      drawPoint(context, x, y, radius, label);
+    }
   }
   context.globalAlpha = 1;
-  const inspectedIndex = hoveredGroup ?? pinnedGroup;
-  if (inspectedIndex !== null && chartPositions[inspectedIndex]) {
-    const [x, y] = chartPositions[inspectedIndex];
-    context.strokeStyle = "#151a56";
-    context.beginPath();
-    context.moveTo(x, padding);
-    context.lineTo(x, height - padding);
-    context.moveTo(padding, y);
-    context.lineTo(width - padding, y);
-    context.globalAlpha = 0.3;
-    context.stroke();
-    context.globalAlpha = 1;
-    context.lineWidth = 2;
-    context.beginPath();
-    context.arc(x, y, 7, 0, Math.PI * 2);
-    context.stroke();
-    context.lineWidth = 1;
-  }
-  if (!comparison) return;
-  const [qx, qy] = position(queryX, queryY);
-  for (const match of comparison[distanceMode].slice(0, 3)) {
-    const group = groups[match.index];
-    const [gx, gy] = position(group.x, group.y);
-    context.setLineDash([3, 4]);
-    context.strokeStyle = distanceMode === "map" ? "#a34a3299" : "#17466cbf";
-    context.beginPath();
-    context.moveTo(qx, qy);
-    context.lineTo(gx, gy);
-    context.stroke();
-    context.setLineDash([]);
-    context.strokeStyle = labels[group.label].color;
-    context.beginPath();
-    context.arc(gx, gy, 5.5, 0, Math.PI * 2);
-    context.stroke();
-  }
-  context.strokeStyle = "#ffffff";
-  context.lineWidth = 2;
-  context.fillStyle = "#173e61";
+  if (!queryCoordinates) return;
+
+  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+  const [x, y] = position(clamp(queryX, minX, maxX), clamp(queryY, minY, maxY));
   context.beginPath();
-  context.arc(qx, qy, 6, 0, Math.PI * 2);
-  context.fill();
+  context.moveTo(x, y - 8);
+  context.lineTo(x + 8, y);
+  context.lineTo(x, y + 8);
+  context.lineTo(x - 8, y);
+  context.closePath();
+  context.lineJoin = "round";
+  context.strokeStyle = "#fffdf7";
+  context.lineWidth = 5;
   context.stroke();
-  context.lineWidth = 1;
+  context.fillStyle = "#f8b99d";
+  context.fill();
+  context.strokeStyle = "#723b29";
+  context.lineWidth = 1.7;
+  context.stroke();
   const outside = queryX < minX || queryX > maxX || queryY < minY || queryY > maxY;
   element("map-caption").textContent = outside
-    ? "The crop projects beyond the chart. Its marker sits at the nearest edge."
+    ? "The selected scan projects outside the map. Its marker sits at the nearest edge."
     : "The two axes use the same scale.";
 }
 
@@ -198,183 +193,40 @@ function markSelection(id) {
   }
 }
 
-function inspectGroup() {
-  const index = hoveredGroup ?? pinnedGroup;
-  const group = index === null ? null : reference?.groups[index];
-  const note = element("map-inspection");
-  note.textContent = group
-    ? labels[group.label].name + " group " + scanGroupName(group) + " (" + group.sourceCount + " crops)"
-    : "Select a point or a match.";
-  note.dataset.inspecting = String(Boolean(group));
-  for (const button of rankButtons) {
-    const linked = String(Number(button.dataset.groupIndex) === index);
-    button.dataset.linked = linked;
-    button.closest("tr").dataset.linked = linked;
-  }
-  drawMap();
-}
-
-function frameAt(event) {
-  const rect = canvas.getBoundingClientRect();
-  let best = null;
-  let bestDistance = 11 ** 2;
-  for (let index = 0; index < chartPositions.length; index += 1) {
-    const [x, y] = chartPositions[index];
-    const distance = (x - (event.clientX - rect.left)) ** 2 + (y - (event.clientY - rect.top)) ** 2;
-    if (distance < bestDistance) {
-      best = index;
-      bestDistance = distance;
-    }
-  }
-  return best;
-}
-
-function pinGroup(index) {
-  pinnedGroup = pinnedGroup === index ? null : index;
-  for (const match of rankButtons) {
-    match.setAttribute("aria-pressed", String(Number(match.dataset.groupIndex) === pinnedGroup));
-  }
-  describeRanks();
-  inspectGroup();
-}
-
-function resetInspection() {
-  if (hoverFrame) cancelAnimationFrame(hoverFrame);
-  hoverFrame = 0;
-  pinnedGroup = null;
-  hoveredGroup = null;
-}
-
-function scanGroupName(group) {
-  return String(group.id).match(/\d+$/)?.[0] ?? group.id;
-}
-
-function ordinal(rank) {
-  const suffix = rank % 100 >= 11 && rank % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][rank % 10] ?? "th";
-  return rank + suffix;
-}
-
-function describeRanks() {
-  if (!comparison) return;
-  const index = pinnedGroup ?? comparison.map[0].index;
-  const group = reference.groups[index];
-  const prefix = labels[group.label].name + " group " + scanGroupName(group);
-  const featuresRank = comparison.ranks.features.get(index);
-  const mapRank = comparison.ranks.map.get(index);
-  element("rank-detail").textContent = featuresRank === undefined
-    ? prefix + " is the source group for this example and is excluded from both rankings."
-    : prefix + " ranks " + ordinal(mapRank) + " on the map and " + ordinal(featuresRank) + " across all features.";
-}
-
 function renderComparison(values, excludedIndex = -1) {
   const query = unitVector(values, reference.dimension);
-  const features = rankGroups(query, vectors, reference.groups.length, excludedIndex);
-  const coordinates = project(query, reference.projection);
-  const map = reference.groups
-    .map((group, index) => ({ index, distance: Math.hypot(coordinates[0] - group.x, coordinates[1] - group.y) }))
-    .filter(({ index }) => index !== excludedIndex)
-    .sort((a, b) => a.distance - b.distance || a.index - b.index);
-  const rankIndex = (ranking) => new Map(ranking.map(({ index }, position) => [index, position + 1]));
-  comparison = { features, map, coordinates, ranks: { features: rankIndex(features), map: rankIndex(map) } };
-  const best = reference.groups[features[0].index];
-  const nearest = labels[best.label].name;
-  const cutoff = reference.validation.nearestDistance.p95;
-  const distant = features[0].distance > cutoff;
+  const [best] = rankGroups(query, vectors, reference.groups.length, excludedIndex);
+  queryCoordinates = project(query, reference.projection);
+  const nearest = labels[reference.groups[best.index].label].name;
+  const distant = best.distance > reference.validation.nearestDistance.p95;
   if (distant && excludedIndex === -1) showMatch("Distant reference match", "distant");
   else showMatch(nearest, "match");
+
   const proximity = element("reference-proximity");
   proximity.hidden = false;
   proximity.dataset.distant = String(distant);
   proximity.textContent = distant
     ? "The closest group is farther away than for 95% of held-out project crops."
     : "This distance is within the range of 95% of held-out project crops.";
-  element("comparison-note").textContent = excludedIndex !== -1
-    ? "Dataset label of the closest group. The sample’s own group is excluded."
-    : "Dataset label of the closest group. A close match only describes resemblance within this reference set.";
-  renderRankings();
-}
-
-function describeMap() {
-  if (!comparison) return;
-  const group = reference.groups[comparison[distanceMode][0].index];
-  element("map-description").textContent =
-    "A PCA scatter plot of 603 scan groups. The first group in the selected ranking is " +
-    labels[group.label].name + ", group " + scanGroupName(group) + ".";
-}
-
-function rankRow({ index, distance }) {
-  const group = reference.groups[index];
-  const featuresRank = comparison.ranks.features.get(index);
-  const mapRank = comparison.ranks.map.get(index);
-  const row = document.createElement("tr");
-  const heading = document.createElement("th");
-  heading.scope = "row";
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "rank-group";
-  button.dataset.groupIndex = index;
-  button.setAttribute("aria-pressed", "false");
-
-  const groupName = document.createElement("strong");
-  groupName.className = "rank-group-id";
-  groupName.textContent = "Group " + scanGroupName(group);
-  const groupLabel = document.createElement("span");
-  groupLabel.className = "rank-group-label";
-  groupLabel.append(swatch(group.label), labels[group.label].name);
-  button.append(groupName, groupLabel);
-  button.addEventListener("click", () => pinGroup(index));
-  button.addEventListener("pointerenter", (event) => {
-    if (event.pointerType === "mouse") {
-      hoveredGroup = index;
-      inspectGroup();
-    }
-  });
-  button.addEventListener("pointerleave", () => {
-    if (hoveredGroup === index) {
-      hoveredGroup = null;
-      inspectGroup();
-    }
-  });
-  heading.append(button);
-  row.append(heading);
-  for (const [rank, score] of [[featuresRank, distance], [mapRank, comparison.map[mapRank - 1].distance]]) {
-    const cell = row.insertCell();
-    cell.className = "rank-value";
-    if (rank === 1) cell.dataset.best = "true";
-    const number = document.createElement("strong");
-    number.className = "rank-number";
-    number.textContent = rank;
-    const value = document.createElement("small");
-    value.className = "rank-distance";
-    value.textContent = "Distance " + score.toFixed(3);
-    cell.append(number, " ", value);
-  }
-  return row;
-}
-
-function renderRankings() {
-  resetInspection();
-  const candidates = new Set([...comparison.features.slice(0, 3), ...comparison.map.slice(0, 3)].map(({ index }) => index));
-  const matches = comparison.features.filter(({ index }) => candidates.has(index));
-  rankRows.replaceChildren(...matches.map(rankRow));
-  rankButtons = Array.from(rankRows.querySelectorAll("button"));
-  describeRanks();
-  describeMap();
-  inspectGroup();
+  const note = element("comparison-note");
+  note.hidden = false;
+  note.textContent = excludedIndex !== -1
+    ? "The example’s own group is excluded from matching."
+    : "The closest match describes resemblance within the study dataset.";
+  element("query-key").hidden = false;
+  drawMap();
 }
 
 function resetComparison(title, note) {
-  comparison = null;
-  resetInspection();
-  element("reference-proximity").hidden = true;
+  queryCoordinates = null;
   showMatch(title);
-  element("comparison-note").textContent = note;
-  element("rank-detail").textContent = note;
-  rankRows.replaceChildren();
-  rankButtons = [];
+  element("reference-proximity").hidden = true;
+  element("query-key").hidden = true;
+  const comparisonNote = element("comparison-note");
+  comparisonNote.textContent = note;
+  comparisonNote.hidden = false;
   element("map-caption").textContent = "The two axes use the same scale.";
-  element("map-description").textContent = "A scatter plot of reference scan groups in the first two principal components, colored by dataset label.";
-  inspectGroup();
+  drawMap();
 }
 
 function useSample(sample) {
@@ -511,15 +363,7 @@ async function start() {
       samples.append(button);
     }
     samples.setAttribute("aria-busy", "false");
-    const legend = element("legend");
-    for (const [key, label] of Object.entries(labels)) {
-      const entry = document.createElement("span");
-      entry.append(swatch(key), label.name);
-      legend.append(entry);
-    }
-    const queryLegend = document.createElement("span");
-    queryLegend.append(swatch(null, "query-key"), "Query");
-    legend.append(queryLegend);
+    configureMap();
     const validation = reference.validation;
     const note = element("reference-validation");
     note.textContent = "When each crop’s entire filename-derived scan group was excluded from matching, the nearest reference label agreed in " +
@@ -530,6 +374,9 @@ async function start() {
     useSample(reference.samples.find((sample) => sample.label === "brain_glioma") ?? reference.samples[0]);
   } catch (error) {
     reference = null;
+    mapBounds = null;
+    for (const button of mapButtons) button.disabled = true;
+    element("map-summary").textContent = "The scan groups could not load. Refresh to retry.";
     samples.setAttribute("aria-busy", "false");
     showMatch("Unavailable");
     say("The comparison files could not load. Refresh to retry. The original findings are below.", true);
@@ -537,15 +384,8 @@ async function start() {
   }
 }
 
-for (const button of distanceButtons) {
-  button.addEventListener("click", () => {
-    distanceMode = button.dataset.distance;
-    for (const control of distanceButtons) {
-      control.setAttribute("aria-pressed", String(control === button));
-    }
-    describeMap();
-    drawMap();
-  });
+for (const button of mapButtons) {
+  button.addEventListener("click", () => selectMapLabel(button.dataset.mapLabel));
 }
 pick.addEventListener("click", () => upload.click());
 upload.addEventListener("change", () => {
@@ -558,27 +398,4 @@ if (typeof ResizeObserver === "function") {
 } else {
   window.addEventListener("resize", drawMap);
 }
-canvas.addEventListener("pointermove", (event) => {
-  if (event.pointerType !== "mouse" || hoverFrame) return;
-  hoverFrame = requestAnimationFrame(() => {
-    hoverFrame = 0;
-    const next = frameAt(event);
-    if (hoveredGroup !== next) {
-      hoveredGroup = next;
-      inspectGroup();
-    }
-  });
-});
-canvas.addEventListener("click", (event) => {
-  const index = frameAt(event);
-  if (index !== null) pinGroup(index);
-});
-canvas.addEventListener("pointerleave", () => {
-  if (hoverFrame) cancelAnimationFrame(hoverFrame);
-  hoverFrame = 0;
-  if (hoveredGroup !== null) {
-    hoveredGroup = null;
-    inspectGroup();
-  }
-});
 start();

@@ -1,0 +1,72 @@
+.elbow-chart {
+  min-width: 0;
+  padding: clamp(14px, 2.2vw, 30px);
+  border-top: 3px solid #478983;
+  background: #eaf4ef;
+  color: #193d3b;
+}
+
+.elbow-caption {
+  display: grid;
+  gap: 5px;
+  line-height: 1.4;
+}
+
+.elbow-caption strong {
+  font: 550 clamp(1.23rem, 2.2vw, 1.65rem)/1.18 var(--display, Georgia, serif);
+}
+
+.elbow-caption span,
+.elbow-axis-title {
+  color: #39555a;
+  font-size: .83rem;
+}
+
+.elbow-axis-title {
+  margin-top: 17px;
+  font-weight: 630;
+}
+
+.elbow-chart canvas {
+  display: block;
+  width: 100%;
+  height: clamp(154px, 23vw, 275px);
+  cursor: crosshair;
+}
+
+.elbow-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  font-size: .87rem;
+  font-weight: 650;
+}
+
+.elbow-control input {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0 8px 0 37px;
+  accent-color: #1d7068;
+  cursor: pointer;
+}
+
+.elbow-control #elbow-selection {
+  min-width: 5.5em;
+  padding: 2px 9px;
+  background: #ffd8bf;
+  color: #783a27;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.elbow-reading {
+  display: block;
+  min-height: 2.6em;
+  color: #39555a;
+  font-size: .85rem;
+  line-height: 1.36;
+  font-variant-numeric: tabular-nums;
+}
