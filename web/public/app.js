@@ -7,6 +7,9 @@ const image = element("query-image");
 const pick = element("pick-image");
 const upload = element("upload");
 const canvas = element("feature-map");
+const specimen = canvas.parentElement.querySelector(".specimen");
+const distanceButtons = Array.from(document.querySelectorAll("[data-distance]"));
+let distanceMode = "features";
 let reference;
 let vectors;
 let worker;
@@ -21,7 +24,8 @@ let chartPositions = [];
 let hoverFrame = 0;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
-function say(message, error = false) {
+function say(message, error = false, visible = true) {
+  status.classList.toggle("sr-only", !visible);
   status.textContent = message;
   status.dataset.state = error ? "error" : "ready";
 }
@@ -47,7 +51,9 @@ function swatch(label, className = "") {
 function drawMap() {
   const context = canvas.getContext("2d");
   if (!context) return;
-  const { width, height } = canvas.getBoundingClientRect();
+  const bounds = canvas.getBoundingClientRect();
+  const print = specimen.getBoundingClientRect();
+  const { width, height } = bounds;
   if (width <= 0 || height <= 0) return;
   const pixelRatio = Math.min(devicePixelRatio || 1, 2);
   const bitmapWidth = Math.round(width * pixelRatio);
@@ -58,31 +64,46 @@ function drawMap() {
   }
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   context.clearRect(0, 0, width, height);
-  const padding = 22;
-  context.strokeStyle = "#d1d5e8";
-  context.beginPath();
-  for (let step = 0; step <= 5; step += 1) {
-    const x = padding + (width - 2 * padding) * step / 5;
-    const y = padding + (height - 2 * padding) * step / 5;
-    context.moveTo(x, padding);
-    context.lineTo(x, height - padding);
-    context.moveTo(padding, y);
-    context.lineTo(width - padding, y);
-  }
-  context.stroke();
   if (!reference) return;
+  const padding = width > 520 ? 34 : 19;
   const groups = reference.groups;
   const xs = groups.map((group) => group.x);
   const ys = groups.map((group) => group.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const limit = (value) => Math.max(0, Math.min(1, value));
+  const extent = (values, query) => {
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    const space = (high - low) * 0.23;
+    return [
+      Math.min(low, Math.max(low - space, query ?? low)),
+      Math.max(high, Math.min(high + space, query ?? high)),
+    ];
+  };
+  const [queryX, queryY] = comparison?.coordinates ?? [];
+  const [minX, maxX] = extent(xs, queryX);
+  const [minY, maxY] = extent(ys, queryY);
+  const scale = Math.min((width - 2 * padding) / (maxX - minX), (height - 2 * padding) / (maxY - minY));
+  const middleX = (minX + maxX) * 0.5;
+  const middleY = (minY + maxY) * 0.5;
+  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
   const position = (x, y) => [
-    padding + limit((x - minX) / (maxX - minX)) * (width - 2 * padding),
-    height - padding - limit((y - minY) / (maxY - minY)) * (height - 2 * padding),
+    width * .5 + (clamp(x, minX, maxX) - middleX) * scale,
+    height * .5 - (clamp(y, minY, maxY) - middleY) * scale,
   ];
+
+  context.strokeStyle = "#a1a897";
+  context.beginPath();
+  context.moveTo(padding, padding);
+  context.lineTo(padding, height - padding);
+  context.lineTo(width - padding, height - padding);
+  for (let step = 1; step < 8; step += 1) {
+    const x = padding + (width - 2 * padding) * step / 8;
+    const y = padding + (height - 2 * padding) * step / 8;
+    context.moveTo(x, height - padding - 3);
+    context.lineTo(x, height - padding + 3);
+    context.moveTo(padding - 3, y);
+    context.lineTo(padding + 3, y);
+  }
+  context.stroke();
   chartPositions = groups.map((group) => position(group.x, group.y));
   context.globalAlpha = 0.62;
   for (let index = 0; index < groups.length; index += 1) {
@@ -113,13 +134,22 @@ function drawMap() {
     context.lineWidth = 1;
   }
   if (!comparison) return;
-  const [queryX, queryY] = comparison.coordinates;
   const [qx, qy] = position(queryX, queryY);
+  if (print.top < bounds.bottom && print.bottom > bounds.top) {
+    const anchorX = print.right - bounds.left;
+    const anchorY = print.top + 11 - bounds.top;
+    context.strokeStyle = "#787c60";
+    context.beginPath();
+    context.moveTo(anchorX, anchorY);
+    context.lineTo(anchorX + 13, anchorY);
+    context.lineTo(qx, qy);
+    context.stroke();
+  }
   for (const match of comparison.matches) {
     const group = groups[match.index];
     const [gx, gy] = position(group.x, group.y);
     context.setLineDash([3, 4]);
-    context.strokeStyle = "#2935699d";
+    context.strokeStyle = distanceMode === "map" ? "#a34a3299" : "#17466cbf";
     context.beginPath();
     context.moveTo(qx, qy);
     context.lineTo(gx, gy);
@@ -132,7 +162,7 @@ function drawMap() {
   }
   context.strokeStyle = "#ffffff";
   context.lineWidth = 2;
-  context.fillStyle = "#151a56";
+  context.fillStyle = "#173e61";
   context.beginPath();
   context.arc(qx, qy, 6, 0, Math.PI * 2);
   context.fill();
@@ -140,8 +170,8 @@ function drawMap() {
   context.lineWidth = 1;
   const outside = queryX < minX || queryX > maxX || queryY < minY || queryY > maxY;
   element("map-caption").textContent = outside
-    ? "The query lies beyond the plotted reference span. Its marker sits on the plot boundary."
-    : "Two dimensions for the plot. All 2,048 features for the comparison.";
+    ? "The crop projects beyond the chart. Its marker sits at the nearest edge."
+    : "The chart uses equal scales for the first two principal components.";
 }
 
 function showImage(url, alt, origin, caption, local = false) {
@@ -168,7 +198,7 @@ function inspectGroup() {
   const note = element("map-inspection");
   note.textContent = group
     ? labels[group.label].name + " · group " + (String(group.id).match(/\d+$/)?.[0] ?? group.id) + " · " + group.sourceCount + " crops"
-    : "Select a point or choose a match below.";
+    : "Select a point or a match.";
   note.dataset.inspecting = String(Boolean(group));
   drawMap();
 }
@@ -203,15 +233,24 @@ function resetInspection() {
   hoveredGroup = null;
 }
 
+function scanGroupName(group) {
+  return String(group.id).match(/\d+$/)?.[0] ?? group.id;
+}
+
 function renderComparison(values, excludedIndex = -1) {
   const query = unitVector(values, reference.dimension);
-  const matches = closestGroups(query, vectors, reference.groups.length, excludedIndex);
-  const best = reference.groups[matches[0].index];
-  comparison = { matches, coordinates: project(query, reference.projection) };
-  resetInspection();
+  const features = closestGroups(query, vectors, reference.groups.length, excludedIndex);
+  const coordinates = project(query, reference.projection);
+  const map = reference.groups
+    .map((group, index) => ({ index, distance: Math.hypot(coordinates[0] - group.x, coordinates[1] - group.y) }))
+    .filter(({ index }) => index !== excludedIndex)
+    .sort((a, b) => a.distance - b.distance || a.index - b.index)
+    .slice(0, 3);
+  comparison = { features, map, coordinates, matches: features };
+  const best = reference.groups[features[0].index];
   const nearest = labels[best.label].name;
   const cutoff = reference.validation.nearestDistance.p95;
-  const distant = matches[0].distance > cutoff;
+  const distant = features[0].distance > cutoff;
   element("comparison-title").textContent = distant && excludedIndex === -1 ? "Distant reference match" : nearest;
   const proximity = element("reference-proximity");
   proximity.hidden = false;
@@ -222,8 +261,25 @@ function renderComparison(values, excludedIndex = -1) {
   element("comparison-note").textContent = excludedIndex !== -1
     ? "Dataset label of the closest group. The sample’s own group is excluded."
     : "Dataset label of the closest group. A close match only describes resemblance within this reference set.";
+  const rankChange = element("rank-change");
+  const chartNearest = reference.groups[map[0].index];
+  rankChange.textContent = features[0].index === map[0].index
+    ? "Both distances rank the same group first."
+    : "Group " + scanGroupName(best) + " comes first across all features. On the map, group " + scanGroupName(chartNearest) + " comes first.";
+  rankChange.hidden = false;
+  renderRankings();
+}
+
+function renderRankings() {
+  element("distance-unit").textContent = distanceMode === "map" ? "Distance in 2D" : "Cosine distance";
+  if (!comparison) return;
+  resetInspection();
+  const matches = comparison[distanceMode];
+  comparison.matches = matches;
+  const group = reference.groups[matches[0].index];
   element("map-description").textContent =
-    "A PCA scatter plot of 603 reference scan groups. The displayed query is closest to a group labeled " + nearest + ".";
+    "A PCA scatter plot of 603 scan groups. The first group in the selected ranking is " +
+    labels[group.label].name + ", group " + scanGroupName(group) + ".";
   const list = element("matches");
   list.replaceChildren(...matches.map(({ index, distance }) => {
     const group = reference.groups[index];
@@ -254,6 +310,7 @@ function resetComparison(title, note) {
   comparison = null;
   resetInspection();
   element("reference-proximity").hidden = true;
+  element("rank-change").hidden = true;
   element("comparison-title").textContent = title;
   element("comparison-note").textContent = note;
   element("matches").replaceChildren();
@@ -271,7 +328,6 @@ function useSample(sample, animate = false) {
   }
   pick.disabled = false;
   markSelection(sample.id);
-  element("atlas-link-text").textContent = "See the reference atlas";
   showImage(localAsset(sample.imagePath).href, "Published MRI project crop labeled " + labels[sample.label].name,
     "Published example", "This crop uses its saved ResNet50 features.");
   if (animate && !reducedMotion.matches && typeof image.animate === "function") {
@@ -280,7 +336,7 @@ function useSample(sample, animate = false) {
       { duration: 170, easing: "cubic-bezier(.23,1,.32,1)" });
   }
   renderComparison(sample.embedding, sample.groupIndex);
-  say("Showing the published " + labels[sample.label].name.toLowerCase() + " example.");
+  say("Showing the published " + labels[sample.label].name.toLowerCase() + " example.", false, false);
 }
 
 function ensureWorker() {
@@ -300,7 +356,6 @@ function ensureWorker() {
       }
       try {
         renderComparison(data.features);
-        element("atlas-link-text").textContent = "See your crop in the atlas";
         say("Comparison complete. The image stayed on this device.");
       } catch (error) {
         resetComparison("Unavailable", "Try another crop.");
@@ -395,12 +450,7 @@ async function start() {
       button.className = "sample-button";
       button.dataset.sample = sample.id;
       button.setAttribute("aria-pressed", "false");
-      const thumb = document.createElement("img");
-      thumb.alt = "";
-      thumb.src = localAsset(sample.imagePath).href;
-      const caption = document.createElement("span");
-      caption.append(swatch(sample.label), labels[sample.label].name);
-      button.append(thumb, caption);
+      button.append(swatch(sample.label), labels[sample.label].name);
       button.addEventListener("click", (event) => useSample(sample, event.detail > 0));
       samples.append(button);
     }
@@ -430,6 +480,15 @@ async function start() {
   }
 }
 
+for (const button of distanceButtons) {
+  button.addEventListener("click", () => {
+    distanceMode = button.dataset.distance;
+    for (const control of distanceButtons) {
+      control.setAttribute("aria-pressed", String(control === button));
+    }
+    renderRankings();
+  });
+}
 pick.addEventListener("click", () => upload.click());
 upload.addEventListener("change", () => {
   const file = upload.files?.[0];

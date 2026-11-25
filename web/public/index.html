@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0c13">
+  <meta name="theme-color" content="#f4f1e8">
   <meta name="description" content="Explore the representations and results behind Sameer Jain’s brain tumor MRI research project.">
   <title>Brain Tumor MRI Research | Sameer Jain</title>
   <link rel="icon" type="image/png" href="./favicon.png">
@@ -12,77 +12,76 @@
   <script type="module" src="./app.js"></script>
 </head>
 <body>
-  <a class="skip-link" href="#explorer">Skip to MRI explorer</a>
+  <a class="skip-link" href="#explorer">Skip to MRI comparison</a>
+  <header class="folio-header">
+    <div class="folio-wrap">
+      <span class="folio-name">Brain tumor MRI</span>
+      <nav aria-label="Project links">
+        <a href="#results">Findings</a>
+        <a href="#method">Methods</a>
+        <a href="https://github.com/sameerjain0106/brain-cancer-ml">Source</a>
+      </nav>
+    </div>
+  </header>
   <main>
-    <section class="film" id="explorer" aria-labelledby="page-title">
-      <header class="film-masthead">
-        <a class="author" href="https://musteermain.vercel.app">Sameer Jain <span aria-hidden="true">↗</span></a>
-        <nav aria-label="Research sections">
-          <a href="#atlas">Atlas</a>
-          <a href="#results">Results</a>
-          <a href="https://github.com/sameerjain0106/brain-cancer-ml">GitHub <span aria-hidden="true">↗</span></a>
-        </nav>
-      </header>
+    <section class="study folio-wrap" id="explorer" aria-labelledby="page-title">
+      <aside class="opening-note">
+        <h1 id="page-title">One scan,<br> two distances.</h1>
+        <p class="question-copy">See how an MRI crop’s nearest groups change when you use the map or all 2,048 features.</p>
 
-      <div class="film-title">
-        <h1 id="page-title">Brain tumor <em>MRI</em></h1>
-        <p>Compare an MRI crop with the images from the original study.</p>
-        <a class="atlas-link" href="#atlas"><span aria-hidden="true">↓</span> <span id="atlas-link-text">See the reference atlas</span></a>
-      </div>
-
-      <figure class="film-photo" aria-labelledby="image-title">
-        <div class="scan-frame">
-          <img id="query-image" src="./research/example-glioma.png" alt="Published MRI project crop labeled Glioma">
-          <div id="scan-empty" hidden>Select an example to explore</div>
-        </div>
-        <figcaption class="film-caption">
-          <span id="image-title" class="sr-only">Selected MRI crop</span>
-          <span id="image-origin">Published example</span>
-          <span id="image-caption">Glioma crop from the original study.</span>
-        </figcaption>
-      </figure>
-
-      <div class="film-controls">
-        <span class="sr-only" id="samples-label">Published MRI examples</span>
-        <div class="sample-list" id="samples" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
-        <div class="file-choice">
-          <button class="upload-button" id="pick-image" type="button" disabled><span aria-hidden="true">＋</span> Compare crop</button>
+        <div class="source-select">
+          <button class="upload-button" id="pick-image" type="button" aria-describedby="upload-hint" disabled><span aria-hidden="true">↑</span> Upload an MRI image</button>
           <input id="upload" type="file" accept="image/png,image/jpeg" hidden>
-          <p class="input-hint">JPG or PNG · on-device comparison</p>
+          <p class="input-hint" id="upload-hint">JPG or PNG · stays on your device</p>
+          <p id="samples-label">Or try an example</p>
+          <div id="samples" class="sample-list" role="group" aria-labelledby="samples-label" aria-busy="true"></div>
+          <p class="status" id="status" role="status" aria-live="polite">Loading the reference set…</p>
         </div>
-        <p id="status" class="status" role="status" aria-live="polite">Loading reference data…</p>
-      </div>
-    </section>
 
-    <section class="atlas" id="atlas" aria-labelledby="map-title">
-      <div class="atlas-intro wrap">
-        <div class="atlas-title">
-          <h2 id="map-title">Reference atlas</h2>
-          <p>603 groups from the original study, positioned by their ResNet50 features.</p>
-        </div>
-        <div class="comparison-lead" aria-labelledby="comparison-title">
-          <p class="label">Closest dataset label</p>
-          <h3 id="comparison-title">–</h3>
-          <p id="comparison-note">Select a crop to compare it with the reference groups.</p>
+        <div class="reference-reading" aria-labelledby="comparison-title">
+          <p class="reading-label">Closest label using all features</p>
+          <h2 id="comparison-title">–</h2>
+          <p id="comparison-note">Select a crop to make a comparison.</p>
           <p class="proximity" id="reference-proximity" hidden></p>
         </div>
-      </div>
+      </aside>
 
-      <div class="map-shell" id="map-shell">
-        <canvas id="feature-map" role="img" aria-describedby="map-description"></canvas>
-        <p class="axis axis-x" aria-hidden="true">PC 1</p>
-        <p class="axis axis-y" aria-hidden="true">PC 2</p>
-      </div>
-      <p id="map-description" class="sr-only">A scatter plot of reference scan groups in the first two principal components, colored by dataset label.</p>
+      <div id="atlas" class="working-figure" aria-labelledby="map-title">
+        <div class="figure-heading">
+          <h2 id="map-title">603 scan groups</h2>
+          <div class="distance-switch" role="group" aria-label="Rank nearest groups by">
+            <button type="button" data-distance="features" aria-pressed="true">All features</button>
+            <button type="button" data-distance="map" aria-pressed="false">Map distance</button>
+          </div>
+        </div>
 
-      <div class="atlas-key wrap">
-        <div class="legend" id="legend" aria-label="Dataset label colors"></div>
-        <p class="map-inspection" id="map-inspection">Select a point or choose a match below.</p>
-      </div>
-      <div class="comparison-list wrap">
-        <div class="list-header"><h3>Closest groups</h3><span>Cosine distance</span></div>
-        <ol id="matches"></ol>
-        <p class="map-caption" id="map-caption">Two dimensions for the plot. All 2,048 features for the comparison.</p>
+        <div class="map-shell" id="map-shell">
+          <canvas id="feature-map" role="img" aria-describedby="map-description"></canvas>
+          <span class="axis axis-x" aria-hidden="true">PC 1</span>
+          <span class="axis axis-y" aria-hidden="true">PC 2</span>
+          <figure class="specimen" aria-labelledby="image-origin">
+            <div class="scan-frame">
+              <img id="query-image" src="./research/example-glioma.png" alt="Published MRI crop labeled Glioma">
+              <div id="scan-empty" hidden>Select an example</div>
+            </div>
+            <figcaption>
+              <strong id="image-origin">Published example</strong>
+              <span id="image-caption">Glioma crop</span>
+            </figcaption>
+          </figure>
+        </div>
+        <p id="map-description" class="sr-only">A PCA scatter plot of reference scan groups, colored by dataset label.</p>
+        <div class="plot-notes">
+          <div class="legend" id="legend" aria-label="Dataset label colors"></div>
+          <p id="map-inspection" class="map-inspection">Select a point or a match.</p>
+        </div>
+
+        <div class="comparison-list">
+          <p id="rank-change" class="rank-change" aria-live="polite" hidden></p>
+          <div class="list-header"><h3>Three nearest groups</h3><span id="distance-unit">Cosine distance</span></div>
+          <ol id="matches"></ol>
+          <p id="map-caption" class="map-caption">The map shows the first two principal components.</p>
+        </div>
       </div>
     </section>
 

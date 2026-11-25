@@ -1,6 +1,6 @@
 # Brain tumor MRI research site
 
-The project explorer compares JPG and PNG research crops with the ResNet50 references published by the original project. The browser processes a selected image locally. The site has no upload endpoint, storage service, or analytics. Interactive results describe proximity to groups in the source dataset. Use de-identified research examples.
+The project explorer compares JPG and PNG research crops with the ResNet50 references published by the original project. Switch between projected 2D distance and full-feature cosine distance to see how the nearest groups change. The browser processes a selected image locally. The site has no upload endpoint, storage service, or analytics. Interactive results describe proximity to groups in the source dataset. Use de-identified research examples.
 
 ## Run locally
 
