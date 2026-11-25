@@ -4,6 +4,9 @@ export const labels = {
   brain_glioma: { name: "Glioma", color: "#0e8363" },
 };
 
+export const MODEL_IMAGE_SIDE = 512;
+export const BGR_CHANNEL_MEANS = Object.freeze([103.939, 116.779, 123.68]);
+
 export function unitVector(values, dimension) {
   if (values.length !== dimension) throw new Error("The feature vector has the wrong size.");
   let squaredLength = 0;
@@ -104,7 +107,7 @@ export async function prepareImage(file) {
     const pixels = context.getImageData(0, 0, width, height).data;
     canvas.width = 1;
     canvas.height = 1;
-    const side = 512;
+    const side = MODEL_IMAGE_SIDE;
     const plane = side * side;
     const tensor = new Float32Array(3 * plane);
     for (let y = 0; y < side; y += 1) {
@@ -112,9 +115,9 @@ export async function prepareImage(file) {
       for (let x = 0; x < side; x += 1) {
         const source = (sourceRow + Math.floor((x + 0.5) * width / side)) * 4;
         const target = y * side + x;
-        tensor[target] = pixels[source + 2] - 103.939;
-        tensor[plane + target] = pixels[source + 1] - 116.779;
-        tensor[2 * plane + target] = pixels[source] - 123.68;
+        tensor[target] = pixels[source + 2] - BGR_CHANNEL_MEANS[0];
+        tensor[plane + target] = pixels[source + 1] - BGR_CHANNEL_MEANS[1];
+        tensor[2 * plane + target] = pixels[source] - BGR_CHANNEL_MEANS[2];
       }
     }
     return { url, tensor };

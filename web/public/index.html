@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="./evidence.css">
   <link rel="stylesheet" href="./anomaly-figure.css">
   <link rel="stylesheet" href="./elbow-figure.css">
+  <link rel="stylesheet" href="./match-distance.css">
+  <link rel="stylesheet" href="./model-input.css">
   <script type="module" src="./app.js"></script>
   <script type="module" src="./anomaly-figure.js"></script>
   <script type="module" src="./elbow-figure.js"></script>
@@ -43,6 +45,14 @@
             <span class="reading-label" id="match-label">Closest dataset match</span>
             <span class="match-title"><strong id="comparison-title">–</strong><span id="match-accent" aria-hidden="true"></span></span>
           </p>
+          <div class="scan-actions" id="scan-actions" hidden>
+            <a id="locate-scan" href="#scan-on-map">Locate this scan</a>
+            <a id="open-model-input" href="#model-input">Inspect model input</a>
+          </div>
+          <details id="match-distance" class="match-distance" hidden>
+            <summary>Why this match?</summary>
+            <div id="match-distance-body"></div>
+          </details>
           <p class="status" id="status" role="status" aria-live="polite">Loading the reference set…</p>
         </div>
         <div class="examples">
@@ -60,11 +70,23 @@
         </header>
         <div class="map-layout">
           <div class="map-controls">
-            <div class="map-filters" role="group" aria-label="Highlight a dataset label">
+            <div class="map-modes" id="map-modes" role="group" aria-label="Color the scan map by" hidden>
+              <button type="button" data-map-mode="labels" aria-pressed="true">Dataset labels</button>
+              <button type="button" data-map-mode="clusters" aria-pressed="false">K-means clusters</button>
+            </div>
+            <div class="map-filters" id="map-filters" role="group" aria-label="Highlight a dataset label">
               <button type="button" data-map-label="all" aria-pressed="true" disabled>All scan types</button>
               <button type="button" data-map-label="brain_menin" aria-pressed="false" disabled><span class="map-mark" aria-hidden="true"></span>Meningioma</button>
               <button type="button" data-map-label="brain_tumor" aria-pressed="false" disabled><span class="map-mark" aria-hidden="true"></span>Tumor</button>
               <button type="button" data-map-label="brain_glioma" aria-pressed="false" disabled><span class="map-mark" aria-hidden="true"></span>Glioma</button>
+            </div>
+            <div class="map-cluster-controls" id="map-cluster-controls" hidden>
+              <div>
+                <label for="map-cluster-count">Number of clusters</label>
+                <output id="map-cluster-selection" for="map-cluster-count">3</output>
+              </div>
+              <input id="map-cluster-count" type="range" min="1" max="14" value="3" step="1">
+              <details class="cluster-sizes"><summary>Cluster sizes</summary><ul id="map-cluster-sizes"></ul></details>
             </div>
             <p id="map-summary" role="status">Loading the scan groups…</p>
             <nav class="study-links" aria-label="Research sections">
@@ -73,9 +95,18 @@
               <a href="#method">Methods</a>
             </nav>
           </div>
+          <div class="map-selection" id="scan-on-map" tabindex="-1" hidden>
+            <img id="map-selected-image" alt="">
+            <div>
+              <span>Selected scan</span>
+              <strong id="map-selected-label"></strong>
+              <span id="map-selected-distance" hidden>Distant reference match</span>
+            </div>
+          </div>
           <figure class="projection-figure">
             <div class="map-shell">
               <canvas id="feature-map" role="img" aria-describedby="map-summary map-caption" aria-label="PCA map of MRI scan groups"></canvas>
+              <span id="map-query-pulse" aria-hidden="true" hidden></span>
               <span class="axis axis-x" aria-hidden="true">PC 1</span>
               <span class="axis axis-y" aria-hidden="true">PC 2</span>
             </div>
@@ -89,6 +120,10 @@
           <p id="comparison-note" hidden></p>
           <p class="proximity" id="reference-proximity" hidden></p>
         </div>
+        <details id="model-input" class="model-input" hidden>
+          <summary>Inspect the model input</summary>
+          <div id="model-input-body"></div>
+        </details>
       </div>
     </section>
 
@@ -108,6 +143,7 @@
           </div>
           <div>
             <figure id="elbow-chart" class="elbow-chart" hidden></figure>
+            <a id="view-fit-on-map" class="record-source" href="#atlas" hidden>See this fit on the scan map</a>
             <figure id="elbow-static" class="record-plate">
               <img src="./research/elbow_plot.png" alt="Within-cluster sum of squares compared across cluster counts" loading="lazy">
               <figcaption>The elbow plot used to choose three clusters.</figcaption>

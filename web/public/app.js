@@ -1,4 +1,6 @@
 import { labels, prepareImage, project, rankGroups, unitVector } from "./analysis.js";
+import { clearMatchDistance, setMatchDistance } from "./match-distance.js";
+import { clearModelInput, setModelInput } from "./model-input.js";
 
 const element = (id) => document.getElementById(id);
 const samples = element("samples");
@@ -13,10 +15,16 @@ const matchAccent = element("match-accent");
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const canvas = element("feature-map");
 const mapButtons = Array.from(document.querySelectorAll("[data-map-label]"));
+const mapModes = Array.from(document.querySelectorAll("[data-map-mode]"));
+const mapClusterCount = element("map-cluster-count");
+const mapQueryPulse = element("map-query-pulse");
+let mapMode = "labels";
 let mapLabel = "all";
 let mapBounds;
 let mapGroups;
+let clusterViews;
 let queryCoordinates = null;
+let queryPulseAnimation;
 let reference;
 let vectors;
 let worker;
@@ -83,6 +91,104 @@ function configureMap() {
   selectMapLabel("all");
 }
 
+const clusterColors = [labels.brain_menin.color, labels.brain_tumor.color, labels.brain_glioma.color,
+  "#775aa6", "#a05987", "#927316", "#34565e", "#b45268", "#795a34", "#303e87", "#719d25",
+  "#a5272b", "#2188a7", "#635447"];
+
+function alignClusterColors(previous, current) {
+  const widths = current.groups.length;
+  const overlap = previous.groups.map(() => Array(widths).fill(0));
+  previous.assignments.forEach((cluster, index) => { overlap[cluster][current.assignments[index]] += 1; });
+  const pairs = overlap.flatMap((row, from) => row.map((count, to) => ({ count, from, to })));
+  pairs.sort((a, b) => b.count - a.count || a.from - b.from || a.to - b.to);
+  const colors = new Array(widths);
+  const used = new Set();
+  for (const { count, from, to } of pairs) {
+    const color = previous.colors[from];
+    if (count && colors[to] === undefined && !used.has(color)) {
+      colors[to] = color;
+      used.add(color);
+    }
+  }
+  for (let index = 0; index < widths; index += 1) {
+    if (colors[index] === undefined) {
+      colors[index] = clusterColors.find((color) => !used.has(color));
+      used.add(colors[index]);
+    }
+  }
+  return colors;
+}
+
+async function loadClusterViews() {
+  try {
+    const data = await loadAsset("research/cluster-fits.json", "json");
+    if (!reference || data.version !== 1 || !Array.isArray(data.groupIds) ||
+        data.groupIds.length !== reference.groups.length ||
+        !data.groupIds.every((id, index) => id === reference.groups[index].id)) return;
+
+    const views = new Map();
+    for (let k = 1; k <= 14; k += 1) {
+      const assignments = data.fits?.[k]?.assignments;
+      if (!Array.isArray(assignments) || assignments.length !== reference.groups.length ||
+          !assignments.every((id) => Number.isInteger(id) && id >= 0 && id < k)) return;
+      const groups = Array.from({ length: k }, () => []);
+      assignments.forEach((id, index) => { groups[id].push(reference.groups[index]); });
+      views.set(k, { assignments, groups });
+    }
+
+    // Anchor the colors to the three-cluster fit, then preserve colors for groups with the largest shared memberships.
+    const base = views.get(3);
+    base.colors = base.groups.map((groups, index) => labels[groups[0]?.label]?.color ?? clusterColors[index]);
+    for (const direction of [-1, 1]) {
+      for (let k = 3 + direction; views.has(k); k += direction) {
+        const view = views.get(k);
+        view.colors = alignClusterColors(views.get(k - direction), view);
+      }
+    }
+    clusterViews = views;
+    element("map-modes").hidden = false;
+    element("view-fit-on-map").hidden = false;
+  } catch {
+    // The dataset view remains available when the optional fits cannot load.
+  }
+}
+
+function setMapMode(mode) {
+  if (mode === "clusters" && !clusterViews) return;
+  mapMode = mode;
+  for (const button of mapModes) button.setAttribute("aria-pressed", String(button.dataset.mapMode === mode));
+  element("map-filters").hidden = mode !== "labels";
+  element("map-cluster-controls").hidden = mode !== "clusters";
+  if (mode === "labels") {
+    selectMapLabel(mapLabel);
+    return;
+  }
+
+  const k = mapClusterCount.valueAsNumber;
+  const view = clusterViews.get(k);
+  const description = k === 1 ? "1 cluster" : k + " clusters";
+  const finding = {
+    2: "Most meningioma groups join the same cluster as the groups labeled Tumor.",
+    3: "The three clusters align with the three dataset labels.",
+    4: "The meningioma groups split into two clusters.",
+  }[k] ?? "The map positions stay fixed.";
+  element("map-cluster-selection").textContent = String(k);
+  mapClusterCount.setAttribute("aria-valuetext", description);
+  element("map-summary").textContent = "K-means fit with " + description + " across " +
+    reference.groups.length.toLocaleString() + " scan groups. " + finding;
+  const sizes = view.groups.map((groups, index) => {
+    const row = document.createElement("li");
+    const mark = document.createElement("span");
+    mark.className = "map-mark";
+    mark.style.backgroundColor = view.colors[index];
+    mark.setAttribute("aria-hidden", "true");
+    row.append(mark, "Cluster " + (index + 1) + " has " + groups.length.toLocaleString() + " groups");
+    return row;
+  });
+  element("map-cluster-sizes").replaceChildren(...sizes);
+  drawMap();
+}
+
 function extendExtent([low, high], query) {
   const space = (high - low) * .23;
   return [Math.min(low, Math.max(low - space, query ?? low)),
@@ -144,19 +250,24 @@ function drawMap() {
   context.stroke();
 
   const radius = width > 550 ? 3.45 : 2.6;
-  for (const [label, groups] of mapGroups) {
-    context.fillStyle = labels[label].color;
-    context.globalAlpha = mapLabel === "all" ? .66 : mapLabel === label ? .86 : .13;
+  const fit = mapMode === "clusters" ? clusterViews.get(mapClusterCount.valueAsNumber) : null;
+  const layers = fit ? fit.groups.map((groups, index) => [index, groups]) : mapGroups;
+  for (const [label, groups] of layers) {
+    context.fillStyle = fit ? fit.colors[label] : labels[label].color;
+    context.globalAlpha = fit ? .77 : mapLabel === "all" ? .66 : mapLabel === label ? .86 : .13;
     for (const group of groups) {
       const [x, y] = position(group.x, group.y);
-      drawPoint(context, x, y, radius, label);
+      drawPoint(context, x, y, radius, fit ? null : label);
     }
   }
   context.globalAlpha = 1;
+  mapQueryPulse.hidden = !queryCoordinates;
   if (!queryCoordinates) return;
 
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
   const [x, y] = position(clamp(queryX, minX, maxX), clamp(queryY, minY, maxY));
+  mapQueryPulse.style.left = x + "px";
+  mapQueryPulse.style.top = y + "px";
   context.beginPath();
   context.moveTo(x, y - 8);
   context.lineTo(x + 8, y);
@@ -195,13 +306,33 @@ function markSelection(id) {
   }
 }
 
-function renderComparison(values, excludedIndex = -1) {
+function compareFeatures(values, excludedIndex = -1) {
   const query = unitVector(values, reference.dimension);
   const [best] = rankGroups(query, vectors, reference.groups.length, excludedIndex);
+  return {
+    query,
+    label: labels[reference.groups[best.index].label].name,
+    distance: best.distance,
+    distant: best.distance > reference.validation.nearestDistance.p95,
+  };
+}
+
+function renderComparison(values, excludedIndex = -1) {
+  const { query, label, distance, distant } = compareFeatures(values, excludedIndex);
+  const example = excludedIndex !== -1;
   queryCoordinates = project(query, reference.projection);
-  const nearest = labels[reference.groups[best.index].label].name;
-  const distant = best.distance > reference.validation.nearestDistance.p95;
-  showMatch(nearest, distant && excludedIndex === -1 ? "distant" : "match");
+  showMatch(label, distant && !example ? "distant" : "match");
+  setMatchDistance(distance, reference.validation.nearestDistance);
+  setModelInput({
+    src: image.src, alt: image.alt, example, label, distance, distant,
+    compareFeatures: (features) => compareFeatures(features, excludedIndex),
+  });
+  const selectedImage = element("map-selected-image");
+  selectedImage.src = image.src;
+  element("map-selected-label").textContent = label;
+  element("map-selected-distance").hidden = !distant;
+  element("scan-on-map").hidden = false;
+  element("scan-actions").hidden = false;
 
   const proximity = element("reference-proximity");
   proximity.hidden = false;
@@ -221,6 +352,12 @@ function renderComparison(values, excludedIndex = -1) {
 function resetComparison(title, note) {
   queryCoordinates = null;
   showMatch(title);
+  clearMatchDistance();
+  clearModelInput();
+  queryPulseAnimation?.cancel();
+  element("scan-actions").hidden = true;
+  element("scan-on-map").hidden = true;
+  element("map-selected-image").removeAttribute("src");
   element("reference-proximity").hidden = true;
   element("query-key").hidden = true;
   const comparisonNote = element("comparison-note");
@@ -365,6 +502,7 @@ async function start() {
     }
     samples.setAttribute("aria-busy", "false");
     configureMap();
+    void loadClusterViews();
     const validation = reference.validation;
     const note = element("reference-validation");
     note.textContent = "When each crop’s entire filename-derived scan group was excluded from matching, the nearest reference label agreed in " +
@@ -388,6 +526,21 @@ async function start() {
 for (const button of mapButtons) {
   button.addEventListener("click", () => selectMapLabel(button.dataset.mapLabel));
 }
+for (const button of mapModes) {
+  button.addEventListener("click", () => setMapMode(button.dataset.mapMode));
+}
+mapClusterCount.addEventListener("input", () => setMapMode("clusters"));
+element("view-fit-on-map").addEventListener("click", () => setMapMode("clusters"));
+element("locate-scan").addEventListener("click", () => {
+  element("scan-on-map").focus({ preventScroll: true });
+  if (!reducedMotion.matches && typeof mapQueryPulse.animate === "function") {
+    queryPulseAnimation?.cancel();
+    queryPulseAnimation = mapQueryPulse.animate([
+      { scale: .55, opacity: 1 }, { scale: 2.35, opacity: 0 },
+    ], { duration: 730, delay: 340, easing: "ease-out" });
+  }
+});
+element("open-model-input").addEventListener("click", () => { element("model-input").open = true; });
 pick.addEventListener("click", () => upload.click());
 upload.addEventListener("change", () => {
   const file = upload.files?.[0];

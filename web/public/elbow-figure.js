@@ -27,6 +27,7 @@ function renderElbow(scores) {
   if (!context) return;
 
   const slider = figure.querySelector("input");
+  const mapSlider = document.getElementById("map-cluster-count");
   const selection = figure.querySelector("#elbow-selection");
   const reading = figure.querySelector("output");
   const count = scores.length;
@@ -36,6 +37,7 @@ function renderElbow(scores) {
   const right = 15;
 
   slider.max = String(count);
+  if (mapSlider) slider.value = mapSlider.value;
   figure.querySelector("#elbow-takeaway").textContent = "In the saved runs, the score fell " + percentDrop(scores[1], scores[2]) +
     " from two to three clusters and " + percentDrop(scores[2], scores[3]) + " from three to four.";
 
@@ -116,14 +118,24 @@ function renderElbow(scores) {
     draw();
   }
 
-  slider.addEventListener("input", update);
+  function selectCount() {
+    if (!mapSlider) { update(); return; }
+    mapSlider.value = slider.value;
+    mapSlider.dispatchEvent(new Event("input"));
+  }
+
+  slider.addEventListener("input", selectCount);
+  mapSlider?.addEventListener("input", () => {
+    slider.value = mapSlider.value;
+    update();
+  });
   canvas.addEventListener("click", event => {
     const bounds = canvas.getBoundingClientRect();
     const offset = event.clientX - bounds.left - left;
     const span = bounds.width - left - right;
     if (span <= 0 || offset < -6 || offset > span + 6) return;
     slider.value = String(1 + Math.round(Math.min(1, Math.max(0, offset / span)) * (count - 1)));
-    update();
+    selectCount();
   });
 
   figure.hidden = false;

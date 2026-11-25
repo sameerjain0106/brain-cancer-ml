@@ -1,6 +1,6 @@
 # Brain tumor MRI research site
 
-The project explorer compares JPG and PNG research crops with the ResNet50 references published by the original project. Highlight dataset labels on the PCA map, inspect the saved K-means runs, and switch the anomaly chart between counts and proportions. The browser processes a selected image locally. The site has no upload endpoint, storage service, or analytics. Interactive results describe proximity to groups in the source dataset. Use de-identified research examples.
+The project explorer compares JPG and PNG research crops with the ResNet50 references published by the original project. Inspect the distance cutoff and prepared input, locate the selected scan on the PCA map, switch the map to K-means fits, and compare anomaly counts and proportions. The browser processes a selected image locally. The site has no upload endpoint, storage service, or analytics. Interactive results describe proximity to groups in the source dataset. Use de-identified research examples.
 
 ## Run locally
 
@@ -19,6 +19,7 @@ Import the existing brain-cancer-ml GitHub repository in Vercel and select `web`
 ## Reproduce the assets and comparisons
 
 - `tools/build-reference-data.py` reads the published ResNet50 embeddings and metadata under `../outputs/clustering/`. It writes the normalized 603-group index, feature map, published example crops, and same-collection validation. The groups come from class folders and filenames.
+- `tools/build-cluster-fits.py` reproduces the 14 K-means fits from the original, unnormalized scan-group means and checks the scores and three-cluster alignment against the notebook’s archived metrics before writing the browser assignments.
 - `tools/benchmark-novelty.py` compares full, centered, and 64-component PCA ResNet50 embeddings using the same held-out groups and cosine novelty scorer. It is a new retrospective comparison separate from the original autoencoder experiment.
 - `tools/export-resnet.py` exports the original ImageNet ResNet50 backbone from official Keras weights, using a browser-compatible ONNX representation. See the script's `--help` and `public/model/resnet50.json` for input, preprocessing, dependencies, and parity details. Use local original data only to validate the export.
 - The browser runtime is ONNX Runtime Web 1.20.1, distributed with its license in `public/vendor/`.

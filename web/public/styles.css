@@ -130,6 +130,8 @@ html { scroll-behavior: smooth; }
   z-index: -1;
 }
 .match-result[data-state="waiting"] #match-accent { display: none; }
+.scan-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 18px; margin-top: 3px; }
+.scan-actions a { display: inline-flex; min-height: 42px; align-items: center; color: var(--sea); font-size: .84rem; font-weight: 650; }
 
 .examples { justify-self: end; width: min(100%, 252px); }
 #samples-label { margin-bottom: 8px; font-weight: 660; font-size: .92rem; }
@@ -163,9 +165,35 @@ html { scroll-behavior: smooth; }
 .map-layout {
   display: grid;
   grid-template-columns: minmax(216px, .85fr) minmax(0, 3.1fr);
+  grid-template-areas: "selection plot" "controls plot";
+  grid-template-rows: auto 1fr;
   align-items: start;
-  gap: clamp(16px, 3.1vw, 44px);
+  gap: 16px clamp(16px, 3.1vw, 44px);
 }
+.map-controls { grid-area: controls; min-width: 0; }
+.map-selection {
+  grid-area: selection;
+  display: grid;
+  grid-template-columns: clamp(55px, 6.5vw, 85px) minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  scroll-margin-top: 18px;
+}
+.map-selection img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #050606; }
+.map-selection span { display: block; font-size: .79rem; color: var(--muted); line-height: 1.32; }
+.map-selection strong { display: block; color: var(--ink); font-size: 1.16rem; font-weight: 700; line-height: 1.25; margin: 3px 0; }
+#map-selected-distance { color: var(--accent-ink); }
+.map-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-bottom: 9px; }
+.map-modes button { background: #deeee8; color: var(--sea); border: 0; min-height: 44px; padding: 5px 7px; font-size: .82rem; line-height: 1.25; font-weight: 670; }
+.map-modes button[aria-pressed="true"] { background: var(--sea); color: #fff; }
+.map-modes button[aria-pressed="false"]:hover { background: #c8e5d9; }
+.map-cluster-controls > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .87rem; font-weight: 640; }
+#map-cluster-count { width: 100%; min-height: 44px; accent-color: #215e59; margin: 0; cursor: pointer; }
+#map-cluster-selection { padding: 0 8px; background: #ffdbc1; color: #853920; font-variant-numeric: tabular-nums; }
+.cluster-sizes summary { min-height: 42px; align-content: center; color: var(--sea); cursor: pointer; font-size: .83rem; font-weight: 640; }
+.cluster-sizes ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 7px 11px; margin: 0; padding: 0; list-style: none; }
+.cluster-sizes li { display: flex; align-items: baseline; gap: 6px; color: var(--muted); font-size: .75rem; }
 .map-filters { display: grid; gap: 4px; }
 .map-filters button {
   display: flex;
@@ -189,7 +217,7 @@ html { scroll-behavior: smooth; }
 #map-summary { margin-top: 13px; max-width: 32ch; color: var(--sea); font-size: .93rem; line-height: 1.44; }
 .study-links { display: flex; gap: 0 18px; flex-wrap: wrap; margin-top: 12px; }
 .study-links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--sea); font-size: .83rem; font-weight: 630; }
-.projection-figure { min-width: 0; }
+.projection-figure { grid-area: plot; min-width: 0; }
 .map-shell { position: relative; background: var(--field); height: clamp(340px, min(48vw, 64vh), 618px); overflow: clip; }
 #feature-map { display: block; width: 100%; height: 100%; }
 .axis { position: absolute; font-size: .76rem; line-height: 1.12; color: var(--sea); font-weight: 650; pointer-events: none; }
@@ -198,6 +226,7 @@ html { scroll-behavior: smooth; }
 .map-notes { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 18px; margin-top: 8px; color: var(--muted); font-size: .8rem; }
 #query-key { display: inline-flex; align-items: center; gap: 7px; font-weight: 630; color: var(--sea); }
 .query-mark { display: inline-block; width: 9px; height: 9px; transform: rotate(45deg); border: 1px solid #723b29; background: #f8b99d; }
+#map-query-pulse { position: absolute; width: 25px; height: 25px; translate: -50% -50%; border: 2px solid #a24329; border-radius: 50%; opacity: 0; pointer-events: none; }
 .map-match-note { display: flex; flex-wrap: wrap; gap: 3px 18px; margin-top: 8px; color: var(--muted); font-size: .79rem; }
 
 main .research-evidence { background: #fbfaf6; }
@@ -235,10 +264,9 @@ main .research-evidence .record-open p { max-width: 60ch; }
   .sample-list { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
   .sample-button { grid-template-columns: minmax(0,1fr); gap: 5px; text-align: center; padding: 4px 3px; font-size: .79rem; }
   .sample-button img { max-height: 55px; }
-  .map-layout { grid-template-columns: minmax(0, 1fr); }
+  .map-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "controls" "selection" "plot"; grid-template-rows: auto; }
   .map-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .map-filters button { min-height: 44px; font-size: .88rem; padding-inline: 9px; }
-  .map-layout .projection-figure { grid-row: 2; }
   .map-shell { height: clamp(254px, 73vw, 410px); }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
